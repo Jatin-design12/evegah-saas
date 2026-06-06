@@ -1,0 +1,207 @@
+'use client';
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import Image from 'next/image';
+
+/* ── Evegah Logo (uses real logo.png from public/) ── */
+export const EvegahLogo = ({ height = 40 }: { height?: number }) => (
+  <Image
+    src="/logo.png"
+    alt="Evegah"
+    width={160}
+    height={42}
+    style={{ height: height, width: 'auto', objectFit: 'contain', display: 'block' }}
+    priority
+  />
+);
+
+/* ── Icons ── */
+const strokeBase = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+const Ic = (p: React.SVGProps<SVGSVGElement>) => <svg width="16" height="16" viewBox="0 0 24 24" {...strokeBase} {...p} />;
+
+const icons: Record<string, React.ReactNode> = {
+  dashboard: <Ic><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></Ic>,
+  reg:       <Ic><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></Ic>,
+  vehicle:   <Ic><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></Ic>,
+  user:      <Ic><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></Ic>,
+  renter:    <Ic><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Ic>,
+  battery:   <Ic><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/><line x1="7" y1="12" x2="11" y2="8"/><line x1="11" y1="8" x2="11" y2="12"/><line x1="11" y1="12" x2="15" y2="12"/></Ic>,
+  reports:   <Ic><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></Ic>,
+  alerts:    <Ic><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></Ic>,
+  zone:      <Ic><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></Ic>,
+  franchise: <Ic><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Ic>,
+  usersrole: <Ic><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Ic>,
+  settings:  <Ic><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Ic>,
+  chevdown:  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+  chevup:    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>,
+  help:      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  arr:       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+};
+
+/* ── Nav config ── */
+interface NavGroup {
+  key: string; icon: string; label: string;
+  href?: string;
+  children?: { label: string; href: string }[];
+}
+
+const NAV: NavGroup[] = [
+  { key: 'dashboard', icon: 'dashboard', label: 'Dashboard', href: '/' },
+  { key: 'reg', icon: 'reg', label: 'Registrations', children: [
+    
+    { label: 'New Ride', href: '/new-rider' },
+    { label: 'Retain Ride', href: '/retain-rider' },
+    { label: 'Return Ride', href: '/return-ride' },
+   
+    { label: 'Vehicles', href: '/Extend Ride' },
+    { label: 'Franchise Users', href: '/franchise-users' },
+  ]},
+  { key: 'vehicles', icon: 'vehicle', label: 'Vehicles', children: [
+    { label: 'All Vehicles', href: '/vehicles/all' },
+    { label: 'Vehicle Types', href: '/vehicles/types' },
+  ]},
+  { key: 'renters', icon: 'renter', label: 'Renters', href: '/renters' },
+  { key: 'battery', icon: 'battery', label: 'Battery', children: [
+    { label: 'Battery Inventory', href: '/battery/inventory' },
+    { label: 'Swap Requests', href: '/battery/swaps' },
+  ]},
+  { key: 'reports', icon: 'reports', label: 'Reports', href: '/reports' },
+  { key: 'alerts', icon: 'alerts', label: 'Alerts', href: '/alerts' },
+  { key: 'zone', icon: 'zone', label: 'Zone Management', children: [
+    { label: 'Franchise', href: '/franchise' },
+    { label: 'Zones', href: '/zones' },
+  ]},
+  { key: 'usersrole', icon: 'usersrole', label: 'Users & Roles', children: [
+    { label: 'Users', href: '/users' },
+    { label: 'Roles', href: '/roles' },
+  ]},
+  { key: 'settings', icon: 'settings', label: 'Settings', href: '/settings' },
+];
+
+const CSS = `
+.ev-sb{position:fixed;inset:0 auto 0 0;width:230px;background:#fff;border-right:1px solid #E5E7EB;display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.ev-sb-logo{display:flex;align-items:center;padding:14px 18px 13px;border-bottom:1px solid #E5E7EB;flex-shrink:0}
+.ev-sb-nav{flex:1;padding:8px 0;overflow-y:auto}
+.ev-sb-ni{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:12.5px;font-weight:500;color:#374151;cursor:pointer;position:relative;transition:background .1s;border-radius:0;justify-content:space-between}
+.ev-sb-ni:hover{background:#F9FAFB}
+.ev-sb-ni.act{background:#EEF2FF;color:#2a195c;font-weight:600}
+.ev-sb-ni.act::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#2a195c;border-radius:0 2px 2px 0}
+.ev-sb-ni-l{display:flex;align-items:center;gap:10px}
+.ev-sb-ni-ic{width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ev-sb-sub{padding:0 0 0 42px}
+.ev-sb-sub-item{display:block;padding:6px 16px;font-size:12px;color:#6B7280;cursor:pointer;transition:background .1s,color .1s;border-radius:0}
+.ev-sb-sub-item:hover{background:#F9FAFB;color:#2a195c}
+.ev-sb-sub-item.act{color:#2a195c;background:#F5F3FF;font-weight:600;border-radius:6px;margin:1px 8px 1px 0}
+.ev-sb-help{padding:14px 14px 10px;border-top:1px solid #E5E7EB;flex-shrink:0}
+.ev-sb-help-box{background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
+.ev-sb-help-orb{width:28px;height:28px;background:#7C3AED;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ev-sb-help-t{font-size:12px;font-weight:700;color:#111827}
+.ev-sb-help-s{font-size:11px;color:#6B7280;margin-top:2px;line-height:1.4}
+.ev-sb-contact{width:100%;padding:7px;background:#2a195c;color:#fff;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;border:none;font-family:inherit}
+.ev-sb-contact:hover{background:#4338CA}
+.ev-sb-user{display:flex;align-items:center;gap:9px;padding:12px 14px;border-top:1px solid #E5E7EB;cursor:pointer;flex-shrink:0}
+.ev-sb-user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.ev-sb-user-name{font-size:12.5px;font-weight:600;color:#111827}
+.ev-sb-user-role{font-size:11px;color:#9CA3AF}
+`;
+
+interface SidebarProps { activePath?: string; isOpen?: boolean }
+
+export default function Sidebar({ activePath, isOpen = true }: SidebarProps) {
+  const pathname = usePathname();
+  const active = activePath || pathname;
+
+  // auto-expand group containing active item
+  const defaultOpen = NAV.reduce((acc, g) => {
+    if (g.children?.some(c => c.href === active)) acc[g.key] = true;
+    return acc;
+  }, {} as Record<string, boolean>);
+
+  const [open, setOpen] = useState<Record<string, boolean>>(defaultOpen);
+  const toggle = (key: string) => setOpen(p => ({ ...p, [key]: !p[key] }));
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <aside className="ev-sb" style={{ display: isOpen ? undefined : 'none' }}>
+        {/* Logo */}
+        <div className="ev-sb-logo">
+          <EvegahLogo height={40} />
+        </div>
+
+        {/* Nav */}
+        <nav className="ev-sb-nav">
+          {NAV.map(g => {
+            const isGroupActive = g.href === active || g.children?.some(c => c.href === active);
+            const isOpen = open[g.key];
+
+            return (
+              <div key={g.key}>
+                {g.href ? (
+                  <Link
+                    href={g.href}
+                    className={`ev-sb-ni ${isGroupActive ? 'act' : ''}`}
+                  >
+                    <div className="ev-sb-ni-l">
+                      <span className="ev-sb-ni-ic">{icons[g.icon]}</span>
+                      {g.label}
+                    </div>
+                  </Link>
+                ) : (
+                  <div
+                    className={`ev-sb-ni ${isGroupActive && !isOpen ? 'act' : ''}`}
+                    onClick={() => toggle(g.key)}
+                  >
+                    <div className="ev-sb-ni-l">
+                      <span className="ev-sb-ni-ic">{icons[g.icon]}</span>
+                      {g.label}
+                    </div>
+                    <span style={{ color: '#9CA3AF' }}>{isOpen ? icons.chevup : icons.chevdown}</span>
+                  </div>
+                )}
+
+                {/* Sub items */}
+                {g.children && isOpen && (
+                  <div className="ev-sb-sub">
+                    {g.children.map(c => (
+                      <Link
+                        key={c.href}
+                        href={c.href}
+                        className={`ev-sb-sub-item ${active === c.href ? 'act' : ''}`}
+                      >
+                        {c.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Help box */}
+        <div className="ev-sb-help">
+          <div className="ev-sb-help-box">
+            <div className="ev-sb-help-orb">{icons.help}</div>
+            <div>
+              <div className="ev-sb-help-t">Need Help?</div>
+              <div className="ev-sb-help-s">Raise a ticket or connect with support team.</div>
+            </div>
+          </div>
+          <button className="ev-sb-contact">Contact Support</button>
+        </div>
+
+        {/* User profile */}
+        <div className="ev-sb-user">
+          <div className="ev-sb-user-av">AV</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="ev-sb-user-name">Akash Verma</div>
+            <div className="ev-sb-user-role">Zone Admin</div>
+          </div>
+          <span style={{ color: '#9CA3AF' }}>{icons.chevdown}</span>
+        </div>
+      </aside>
+    </>
+  );
+}
