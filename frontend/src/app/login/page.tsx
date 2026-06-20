@@ -7,11 +7,14 @@ const CSS = `
 
 .log-shell {
   display: flex;
+  align-items: center;
   min-height: 100vh;
   background: #F8F9FF;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
   position: relative;
+  padding: 24px 20px;
+  box-sizing: border-box;
 }
 
 /* Background Wavy Lines */
@@ -28,11 +31,12 @@ const CSS = `
 
 /* Left Hero Column */
 .log-hero {
-  flex: 1.1;
+  flex: 1;
+  max-width: 760px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 40px 60px;
+  justify-content: center;
+  padding: 36px 48px;
   position: relative;
   z-index: 2;
 }
@@ -241,10 +245,10 @@ const CSS = `
 .log-card {
   background: #fff;
   border: 1px solid #E2E8F0;
-  border-radius: 28px;
+  border-radius: 20px;
   width: 100%;
-  max-width: 460px;
-  padding: 36px 40px;
+  max-width: 520px;
+  padding: 32px 36px;
   box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.05);
   display: flex;
   flex-direction: column;
@@ -496,8 +500,16 @@ const CSS = `
 
 @media (max-width: 900px) {
   .log-hero { display: none; }
-  .log-shell { justify-content: center; }
+  .log-shell { justify-content: center; padding: 16px; }
   .log-card-col { flex: 1; width: 100%; max-width: 480px; }
+  .log-card { padding: 20px; border-radius: 16px; }
+}
+
+@media (max-width: 1200px) {
+  /* On medium screens keep the hero but limit its width so the card stays centered */
+  .log-hero { max-width: 480px; padding: 28px 24px; }
+  .log-card { max-width: 520px; padding: 28px; }
+  .log-shell { gap: 18px; }
 }
 `;
 
