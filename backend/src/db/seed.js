@@ -5,6 +5,94 @@ const { v4: uuidv4 } = require('uuid');
 const seed = async () => {
   console.log('Seeding database...');
 
+  // Seed roles
+  console.log('Seeding default roles...');
+  const defaultRoles = [
+    {
+      name: 'Super Admin',
+      code: 'SUPER_ADMIN',
+      description: 'Full access to all system modules and settings.',
+      reporting_to: 'Board',
+      status: 'Active',
+      permissions: {
+        Dashboard: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Riders: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Vehicles: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Battery: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        "IoT Devices": { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Payments: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Reports: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Alerts: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        "Zone Management": { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Franchise: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Settings: { access: true, create: true, view: true, edit: true, delete: true, export: true }
+      },
+      custom_permissions: ['all_permissions']
+    },
+    {
+      name: 'Platform Admin',
+      code: 'PLATFORM_ADMIN',
+      description: 'Administrative access to system operations.',
+      reporting_to: 'Super Admin',
+      status: 'Active',
+      permissions: {
+        Dashboard: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Riders: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Vehicles: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Battery: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        "IoT Devices": { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Payments: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Reports: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Alerts: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        "Zone Management": { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Franchise: { access: true, create: true, view: true, edit: true, delete: true, export: true },
+        Settings: { access: true, create: true, view: true, edit: true, delete: true, export: true }
+      },
+      custom_permissions: []
+    },
+    {
+      name: 'Zone Admin',
+      code: 'ZONE_ADMIN',
+      description: 'Management access for zone specific operations.',
+      reporting_to: 'Platform Admin',
+      status: 'Active',
+      permissions: { Dashboard: { access: true, create: false, view: true, edit: true, delete: false, export: true } },
+      custom_permissions: []
+    },
+    {
+      name: 'Franchise Manager',
+      code: 'FRANCHISE_MANAGER',
+      description: 'Onboarding and operations access for franchise partners.',
+      reporting_to: 'Platform Admin',
+      status: 'Active',
+      permissions: { Dashboard: { access: true, create: false, view: true, edit: false, delete: false, export: false } },
+      custom_permissions: []
+    },
+    {
+      name: 'Employee',
+      code: 'EMPLOYEE',
+      description: 'Standard employee access for zone operations.',
+      reporting_to: 'Zone Admin',
+      status: 'Active',
+      permissions: { Dashboard: { access: true, create: false, view: true, edit: false, delete: false, export: false } },
+      custom_permissions: []
+    }
+  ];
+
+  for (const role of defaultRoles) {
+    await db.query(`
+      INSERT INTO roles (name, code, description, reporting_to, status, permissions, custom_permissions)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (name) DO UPDATE SET
+        code = EXCLUDED.code,
+        description = EXCLUDED.description,
+        reporting_to = EXCLUDED.reporting_to,
+        status = EXCLUDED.status,
+        permissions = EXCLUDED.permissions,
+        custom_permissions = EXCLUDED.custom_permissions
+    `, [role.name, role.code, role.description, role.reporting_to, role.status, JSON.stringify(role.permissions), JSON.stringify(role.custom_permissions)]);
+  }
+
   // Seed user
   const userId = uuidv4();
   await db.query(`
@@ -12,6 +100,15 @@ const seed = async () => {
     VALUES ($1, $2, $3, $4)
     ON CONFLICT (email) DO NOTHING
   `, [userId, 'Priya Sharma', 'priya@evegah.com', 'Employee']);
+
+  const adminUserId = uuidv4();
+  await db.query(`
+    INSERT INTO users (id, name, email, role, mobile, zone, status, password) 
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    ON CONFLICT (email) DO UPDATE SET
+      role = EXCLUDED.role,
+      name = EXCLUDED.name
+  `, [adminUserId, 'Himanshu', 'himanshu@evegah.com', 'Super Admin', '+91 99999 88888', 'Multiple Zones', 'Active', 'admin123']);
 
   // Seed riders
   const riders = [

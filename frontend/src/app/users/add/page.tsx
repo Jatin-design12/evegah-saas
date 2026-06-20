@@ -7,7 +7,7 @@ import TopBar from '@/components/TopBar';
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.ua-shell { display: flex; min-height: 100vh; background: #F8F9FF; font-family: 'Inter', sans-serif; }
+.ua-shell { display: flex; min-height: 100vh; background: #fff; font-family: 'Inter', sans-serif; }
 .ua-main { margin-left: 230px; display: flex; flex-direction: column; min-height: 100vh; width: calc(100% - 230px); }
 .ua-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 
@@ -117,17 +117,53 @@ function AddUserPageContent() {
   const [password, setPassword] = useState('G7r!pLk9@#X2s');
   const [showPassword, setShowPassword] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
+  
+  // New States for profile image and dynamic roles
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [roles, setRoles] = useState<any[]>([]);
+
+  // Load roles list on component mount
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiUrl}/roles`);
+        if (res.ok) {
+          const result = await res.json();
+          setRoles(result.data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching roles:', err);
+      }
+    };
+    fetchRoles();
+  }, []);
 
   // Load user details if in edit mode
   useEffect(() => {
-    if (editUserId === 'USR-002') {
-      setFullName('Rohit Sharma');
-      setEmail('rohit.sharma@evegah.com');
-      setPhone('87654 32109');
-      setRole('Operations Manager');
-      setZone('Connaught Place Zone');
-      setStatus('Active');
-      setPassword('P@$$w0rd123');
+    if (editUserId) {
+      const fetchUser = async () => {
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+          const res = await fetch(`${apiUrl}/users/${editUserId}`);
+          if (res.ok) {
+            const result = await res.json();
+            const u = result.data;
+            if (u) {
+              setFullName(u.name || '');
+              setEmail(u.email || '');
+              setPhone(u.mobile || '');
+              setRole(u.role || 'Select role');
+              setZone(u.zone || 'Select zone or scope');
+              setStatus(u.status === 'Active' ? 'Active' : 'Inactive');
+              setAvatarUrl(u.avatar_url || '');
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching user details:', err);
+        }
+      };
+      fetchUser();
     }
   }, [editUserId]);
 
@@ -140,14 +176,68 @@ function AddUserPageContent() {
     setPassword(pwd);
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editUserId) {
-      alert(`User ${editUserId} details updated successfully!`);
-    } else {
-      alert(`User ${fullName} account registered successfully!`);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size exceeds 2MB limit.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-    router.push('/users');
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (role === 'Select role') {
+      alert('Please select a valid role.');
+      return;
+    }
+    if (zone === 'Select zone or scope') {
+      alert('Please select a valid zone or scope.');
+      return;
+    }
+
+    const payload = {
+      name: fullName,
+      email,
+      mobile: phone,
+      role,
+      zone,
+      status,
+      password,
+      avatar_url: avatarUrl
+    };
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const url = editUserId ? `${apiUrl}/users/${editUserId}` : `${apiUrl}/users`;
+      const method = editUserId ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await response.json();
+      if (response.ok) {
+        alert(editUserId ? 'User details updated successfully!' : 'User account registered successfully!');
+        router.push('/users');
+      } else {
+        alert(`Error: ${resData.message || 'Failed to save user'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error. Failed to save user details.');
+    }
   };
 
   return (
@@ -203,6 +293,45 @@ function AddUserPageContent() {
                     </div>
                     <span>Personal Information</span>
                   </h3>
+
+                  {/* Profile Picture Upload Section */}
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '20px', marginBottom: '4px' }}>
+                    <div style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '50%', border: '2px solid #E2E8F0', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8FAFC', flexShrink: 0 }}>
+                      {avatarUrl ? (
+                        <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar preview" />
+                      ) : (
+                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#94A3B8' }}>
+                          {fullName ? fullName.split(' ').map(n=>n[0]).join('').toUpperCase() : '?'}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: '#2a195c', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          style={{ display: 'none' }} 
+                          onChange={handleFileChange}
+                        />
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <span>Upload Photo</span>
+                      </label>
+                      {avatarUrl && (
+                        <button 
+                          type="button" 
+                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '11px', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline', width: 'fit-content', textAlign: 'left', padding: 0 }}
+                          onClick={() => setAvatarUrl('')}
+                        >
+                          Remove Photo
+                        </button>
+                      )}
+                      <span style={{ fontSize: '10.5px', color: '#94A3B8' }}>JPG, PNG or JPEG. Max size 2MB.</span>
+                    </div>
+                  </div>
 
                   <div className="ua-form-row">
                     <div className="ua-form-field">
@@ -281,11 +410,19 @@ function AddUserPageContent() {
                         onChange={(e) => setRole(e.target.value)}
                       >
                         <option disabled value="Select role">Select role</option>
-                        <option value="Zone Admin">Zone Admin</option>
-                        <option value="Operations Manager">Operations Manager</option>
-                        <option value="Franchise Manager">Franchise Manager</option>
-                        <option value="Battery Technician">Battery Technician</option>
-                        <option value="Support Executive">Support Executive</option>
+                        {roles.length > 0 ? (
+                          roles.map((r: any) => (
+                            <option key={r.id || r.name} value={r.name}>{r.name}</option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="Zone Admin">Zone Admin</option>
+                            <option value="Operations Manager">Operations Manager</option>
+                            <option value="Franchise Manager">Franchise Manager</option>
+                            <option value="Battery Technician">Battery Technician</option>
+                            <option value="Support Executive">Support Executive</option>
+                          </>
+                        )}
                       </select>
                     </div>
 

@@ -4,6 +4,51 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 
+function AnimatedCount({ value }: { value: string | number }) {
+  const [displayValue, setDisplayValue] = useState<string | number>(value);
+
+  useEffect(() => {
+    const str = String(value);
+    const numericMatch = str.match(/[\d.]+/g);
+    if (!numericMatch) {
+      setDisplayValue(value);
+      return;
+    }
+    const numericStr = numericMatch.join('');
+    const target = parseFloat(numericStr);
+    if (isNaN(target)) {
+      setDisplayValue(value);
+      return;
+    }
+    let start = 0;
+    const duration = 1000;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = progress * (2 - progress);
+      const current = Math.floor(start + easeProgress * (target - start));
+      let formatted = String(current);
+      if (str.includes('₹')) {
+        formatted = '₹' + current.toLocaleString('en-IN');
+      } else if (str.includes(',')) {
+        formatted = current.toLocaleString('en-US');
+      } else if (str.includes('%')) {
+        formatted = current + '%';
+      }
+      setDisplayValue(formatted);
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return <>{displayValue}</>;
+}
+
 const CSS = `
 .bi-shell { display: flex; min-height: 100vh; background: #F8FAFC; font-family: 'Inter', sans-serif; }
 .bi-main { margin-left: 230px; display: flex; flex-direction: column; min-height: 100vh; width: calc(100% - 230px); }
@@ -123,6 +168,36 @@ const CSS = `
 .bi-footer-bar { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: #64748B; font-weight: 500; padding: 10px 0 0; }
 .bi-refresh-btn { background: none; border: none; color: #64748B; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .bi-refresh-btn:hover { color: #6366F1; }
+
+@keyframes drawPath {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes growBar {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-draw {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawPath 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-draw-large {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: drawPath 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-scale-in {
+  transform-origin: center;
+  animation: scaleIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.animate-grow-bar {
+  transform-origin: bottom;
+  animation: growBar 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
 `;
 
 interface BatteryItem {
@@ -380,7 +455,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-stat-info">
                   <div className="bi-stat-lbl">Total Batteries</div>
-                  <div className="bi-stat-val">{totalBatteries}</div>
+                  <div className="bi-stat-val"><AnimatedCount value={totalBatteries} /></div>
                   <div className="bi-stat-sub">All locations</div>
                 </div>
               </div>
@@ -390,7 +465,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-stat-info">
                   <div className="bi-stat-lbl">Available</div>
-                  <div className="bi-stat-val">{availableCount}</div>
+                  <div className="bi-stat-val"><AnimatedCount value={availableCount} /></div>
                   <div className="bi-stat-sub"><span>{availablePct}</span></div>
                 </div>
               </div>
@@ -400,7 +475,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-stat-info">
                   <div className="bi-stat-lbl">In Use</div>
-                  <div className="bi-stat-val">{assignedCount}</div>
+                  <div className="bi-stat-val"><AnimatedCount value={assignedCount} /></div>
                   <div className="bi-stat-sub"><span>{assignedPct}</span></div>
                 </div>
               </div>
@@ -410,7 +485,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-stat-info">
                   <div className="bi-stat-lbl">In Maintenance</div>
-                  <div className="bi-stat-val">{inMaintenanceCount}</div>
+                  <div className="bi-stat-val"><AnimatedCount value={inMaintenanceCount} /></div>
                   <div className="bi-stat-sub"><span>{maintenancePct}</span></div>
                 </div>
               </div>
@@ -420,7 +495,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-stat-info">
                   <div className="bi-stat-lbl">Decommissioned</div>
-                  <div className="bi-stat-val">{decommissionedCount}</div>
+                  <div className="bi-stat-val"><AnimatedCount value={decommissionedCount} /></div>
                   <div className="bi-stat-sub"><span>{decommissionedPct}</span></div>
                 </div>
               </div>
@@ -430,7 +505,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-stat-info">
                   <div className="bi-stat-lbl">Low Health Alert</div>
-                  <div className="bi-stat-val">{lowHealthCount}</div>
+                  <div className="bi-stat-val"><AnimatedCount value={lowHealthCount} /></div>
                   <div className="bi-stat-sub">
                     <span />
                     <span className="bi-stat-link" onClick={() => setSelectedHealth('Poor')}>View All</span>
@@ -594,7 +669,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-chart-body">
                   <div className="donut-container">
-                    <svg width="100%" height="100%" viewBox="0 0 42 42">
+                    <svg className="animate-scale-in" width="100%" height="100%" viewBox="0 0 42 42">
                       <circle cx="21" cy="21" r="15.91549430918954" fill="#fff" />
                       {renderDonutCircles(topLocations.map((item, idx) => ({ val: item.val, color: locationColors[idx % locationColors.length] })))}
                     </svg>
@@ -628,7 +703,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-chart-body">
                   <div className="donut-container">
-                    <svg width="100%" height="100%" viewBox="0 0 42 42">
+                    <svg className="animate-scale-in" width="100%" height="100%" viewBox="0 0 42 42">
                       <circle cx="21" cy="21" r="15.91549430918954" fill="#fff" />
                       {renderDonutCircles(Object.entries(statusCounts).map(([name, val]) => ({ val, color: statusColors[name as keyof typeof statusColors] })))}
                     </svg>
@@ -662,7 +737,7 @@ export default function BatteryInventoryPage() {
                 </div>
                 <div className="bi-chart-body">
                   <div className="donut-container">
-                    <svg width="100%" height="100%" viewBox="0 0 42 42">
+                    <svg className="animate-scale-in" width="100%" height="100%" viewBox="0 0 42 42">
                       <circle cx="21" cy="21" r="15.91549430918954" fill="#fff" />
                       {renderDonutCircles([
                         { val: healthyCount, color: '#10B981' },

@@ -1,5 +1,8 @@
 "use client";
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
+
 
 const CSS = `
 .ev-tb{height:68px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;padding:0 22px;gap:12px;position:sticky;top:0;z-index:90;flex-shrink:0}
@@ -99,6 +102,51 @@ export default function TopBar({
   hideZone = false,
   onToggle,
 }: TopBarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    const getPermissionKeyForPath = (path: string): string => {
+      if (path === '/' || path.startsWith('/dashboard')) return 'Dashboard';
+      if (path.startsWith('/new-rider') || path.startsWith('/retain-rider') || path.startsWith('/return-ride') || path.startsWith('/Extend') || path.startsWith('/franchise-users')) {
+        return 'Dashboard';
+      }
+      if (path.startsWith('/vehicles')) return 'Vehicles';
+      if (path.startsWith('/renters') || path.startsWith('/riders')) return 'Riders';
+      if (path.startsWith('/battery')) return 'Battery';
+      if (path.startsWith('/iot-devices')) return 'IoT Devices';
+      if (path.startsWith('/payment') || path.startsWith('/payments')) return 'Payments';
+      if (path.startsWith('/reports')) return 'Reports';
+      if (path.startsWith('/alerts')) return 'Alerts';
+      if (path.startsWith('/zones')) return 'Zone Management';
+      if (path.startsWith('/franchise')) return 'Franchise';
+      if (path.startsWith('/settings')) return 'Settings';
+      if (path.startsWith('/users') || path.startsWith('/roles')) return 'Settings';
+      if (path.startsWith('/announcements')) return 'Dashboard';
+      if (path.startsWith('/co2-saving')) return 'Dashboard';
+      return '';
+    };
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem("evegah_user_permissions");
+      if (stored) {
+        try {
+          const permissions = JSON.parse(stored);
+          const permKey = getPermissionKeyForPath(pathname);
+          if (permKey) {
+            const perm = permissions[permKey];
+            if (perm && perm.access === false) {
+              alert(`Access Denied: You do not have permissions to access the ${permKey} module.`);
+              router.push('/');
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing permissions in TopBar route guard:", e);
+        }
+      }
+    }
+  }, [pathname, router]);
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />

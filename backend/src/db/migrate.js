@@ -154,6 +154,26 @@ const migrate = async () => {
       points JSONB NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS roles (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      name VARCHAR(100) NOT NULL UNIQUE,
+      code VARCHAR(50) NOT NULL UNIQUE,
+      description TEXT,
+      reporting_to VARCHAR(100),
+      status VARCHAR(30) DEFAULT 'Active',
+      permissions JSONB DEFAULT '{}'::jsonb,
+      custom_permissions JSONB DEFAULT '[]'::jsonb,
+      users_count INT DEFAULT 0,
+      last_updated TIMESTAMPTZ DEFAULT NOW(),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile VARCHAR(20);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS zone VARCHAR(150);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'Active';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
   `);
 
   console.log('Migrations complete!');

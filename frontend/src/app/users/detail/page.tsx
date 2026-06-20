@@ -1,13 +1,14 @@
 "use client";
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.ud-shell { display: flex; min-height: 100vh; background: #F8F9FF; font-family: 'Inter', sans-serif; }
+.ud-shell { display: flex; min-height: 100vh; background: #fff; font-family: 'Inter', sans-serif; }
 .ud-main { margin-left: 230px; display: flex; flex-direction: column; min-height: 100vh; width: calc(100% - 230px); }
 .ud-page { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
 
@@ -381,9 +382,144 @@ function UserDetailContent() {
   const [selectedAction, setSelectedAction] = useState('All Actions');
   const [selectedModule, setSelectedModule] = useState('All Modules');
 
-  const user = useMemo(() => {
-    return USERS_DATA[userId] || USERS_DATA['USR-002'];
+  const [user, setUser] = useState<any>(null);
+  const [rolePermissions, setRolePermissions] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setLoading(true);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const resUser = await fetch(`${apiUrl}/users/${userId}`);
+        
+        let u = null;
+        if (resUser.ok) {
+          const userResult = await resUser.json();
+          u = userResult.data;
+        }
+
+        if (u) {
+          const initials = u.name ? u.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) : '?';
+          let avatarCls = 'pink';
+          if (u.id.endsWith('1')) avatarCls = 'purple';
+          else if (u.id.endsWith('2')) avatarCls = 'green';
+          else if (u.id.endsWith('3')) avatarCls = 'orange';
+          else if (u.id.endsWith('4')) avatarCls = 'blue';
+
+          const userObj = {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            mobile: u.mobile || 'N/A',
+            role: u.role || 'Employee',
+            zone: u.zone || 'Multiple Zones',
+            status: u.status || 'Active',
+            reportingTo: u.role === 'Super Admin' ? 'Board' : 'Super Admin',
+            avatar: u.avatar_url || '',
+            initials,
+            avatarCls
+          };
+          setUser(userObj);
+
+          const resRoles = await fetch(`${apiUrl}/roles`);
+          if (resRoles.ok) {
+            const rolesResult = await resRoles.json();
+            const matchedRole = rolesResult.data?.find((r: any) => 
+              r.name.toLowerCase() === userObj.role.toLowerCase() || 
+              r.code.toLowerCase() === userObj.role.toLowerCase()
+            );
+            if (matchedRole) {
+              setRolePermissions(matchedRole.permissions || {});
+            }
+          }
+        } else {
+          // Fallback to static mock data
+          const mockUser = USERS_DATA[userId] || USERS_DATA['USR-002'];
+          setUser(mockUser);
+        }
+      } catch (err) {
+        console.error('Error fetching user detail:', err);
+        // Fallback to mock data on error
+        const mockUser = USERS_DATA[userId] || USERS_DATA['USR-002'];
+        setUser(mockUser);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
   }, [userId]);
+
+  const permRows = useMemo(() => {
+    const modulesTemplate = [
+      { name: 'Dashboard', subtitle: 'View dashboards and analytics', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>, supported: { access: true, create: true, view: true, edit: true, delete: true, export: true } },
+      { name: 'Riders', subtitle: 'Manage riders and rider analytics', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, supported: { access: true, create: true, view: true, edit: true, delete: true, export: false } },
+      { name: 'Vehicles', subtitle: 'Manage vehicles and documents', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>, supported: { access: true, create: true, view: true, edit: true, delete: true, export: true } },
+      { name: 'Battery', subtitle: 'Battery inventory and operations', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"/><line x1="23" y1="11" x2="23" y2="13"/></svg>, supported: { access: true, create: true, view: true, edit: true, delete: true, export: false } },
+      { name: 'Reports', subtitle: 'Generate and view reports', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, supported: { access: true, create: true, view: true, edit: true, delete: false, export: true } },
+      { name: 'Franchise', subtitle: 'Franchise management', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, supported: { access: true, create: false, view: true, edit: false, delete: false, export: false } },
+      { name: 'Alerts', subtitle: 'View and manage alerts', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>, supported: { access: true, create: true, view: false, edit: false, delete: false, export: false } },
+      { name: 'Settings', subtitle: 'System and platform settings', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, supported: { access: true, create: true, view: true, edit: true, delete: true, export: true } }
+    ];
+
+    if (!rolePermissions) {
+      return modulesTemplate.map(m => ({
+        name: m.name,
+        subtitle: m.subtitle,
+        icon: m.icon,
+        access: m.supported.access ? 'restricted' : 'na',
+        create: m.supported.create ? 'restricted' : 'na',
+        view: m.supported.view ? 'restricted' : 'na',
+        edit: m.supported.edit ? 'restricted' : 'na',
+        delete: m.supported.delete ? 'restricted' : 'na',
+        export: m.supported.export ? 'restricted' : 'na'
+      } as PermissionRow));
+    }
+
+    return modulesTemplate.map(m => {
+      const perms = rolePermissions[m.name] || {};
+      const getVal = (col: 'access' | 'create' | 'view' | 'edit' | 'delete' | 'export') => {
+        if (!m.supported[col]) return 'na';
+        return perms[col] ? 'granted' : 'restricted';
+      };
+
+      return {
+        name: m.name,
+        subtitle: m.subtitle,
+        icon: m.icon,
+        access: getVal('access'),
+        create: getVal('create'),
+        view: getVal('view'),
+        edit: getVal('edit'),
+        delete: getVal('delete'),
+        export: getVal('export')
+      } as PermissionRow;
+    });
+  }, [rolePermissions]);
+
+  const permSummary = useMemo(() => {
+    let totalModules = 8;
+    let totalPerms = 0;
+    let granted = 0;
+    let restricted = 0;
+
+    permRows.forEach(row => {
+      const cols = ['access', 'create', 'view', 'edit', 'delete', 'export'] as const;
+      cols.forEach(col => {
+        const val = row[col];
+        if (val === 'granted') {
+          totalPerms++;
+          granted++;
+        } else if (val === 'restricted') {
+          totalPerms++;
+          restricted++;
+        }
+      });
+    });
+
+    return { totalModules, totalPerms, granted, restricted };
+  }, [permRows]);
 
   const filteredLogs = useMemo(() => {
     return LOGGED_ACTIVITIES.filter(l => {
@@ -393,6 +529,7 @@ function UserDetailContent() {
       return matchesSearch && matchesAction && matchesModule;
     });
   }, [searchQuery, selectedAction, selectedModule]);
+
 
   const renderBadge = (status: 'granted' | 'restricted' | 'na') => {
     if (status === 'granted') {
@@ -437,8 +574,29 @@ function UserDetailContent() {
     }
   ];
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#fff', color: '#64748B', fontFamily: 'sans-serif' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '40px', height: '40px', border: '3px solid #E2E8F0', borderTopColor: '#2a195c', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <div style={{ fontSize: '14px', fontWeight: '600' }}>Loading user details...</div>
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#fff', color: '#EF4444', fontFamily: 'sans-serif' }}>
+        <div style={{ fontSize: '16px', fontWeight: '700' }}>User not found.</div>
+      </div>
+    );
+  }
+
   return (
     <>
+
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="ud-shell">
         <Sidebar activePath="/users" />
@@ -569,7 +727,7 @@ function UserDetailContent() {
                     <span className="ud-summary-lbl">Total Modules</span>
                     <div className="ud-summary-box purple">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                      <span>8</span>
+                      <span>{permSummary.totalModules}</span>
                     </div>
                   </div>
 
@@ -577,7 +735,7 @@ function UserDetailContent() {
                     <span className="ud-summary-lbl">Total Perms</span>
                     <div className="ud-summary-box blue">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      <span>42</span>
+                      <span>{permSummary.totalPerms}</span>
                     </div>
                   </div>
 
@@ -585,7 +743,7 @@ function UserDetailContent() {
                     <span className="ud-summary-lbl">Granted</span>
                     <div className="ud-summary-box green">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                      <span>38</span>
+                      <span>{permSummary.granted}</span>
                     </div>
                   </div>
 
@@ -593,7 +751,7 @@ function UserDetailContent() {
                     <span className="ud-summary-lbl">Restricted</span>
                     <div className="ud-summary-box red">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                      <span>4</span>
+                      <span>{permSummary.restricted}</span>
                     </div>
                   </div>
 
@@ -881,7 +1039,7 @@ function UserDetailContent() {
                       </tr>
                     </thead>
                     <tbody>
-                      {PERM_ROWS.map(row => (
+                      {permRows.map(row => (
                         <tr key={row.name}>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

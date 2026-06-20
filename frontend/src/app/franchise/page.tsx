@@ -1,7 +1,52 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
+
+function AnimatedCount({ value }: { value: string | number }) {
+  const [displayValue, setDisplayValue] = useState<string | number>(value);
+
+  useEffect(() => {
+    const str = String(value);
+    const numericMatch = str.match(/[\d.]+/g);
+    if (!numericMatch) {
+      setDisplayValue(value);
+      return;
+    }
+    const numericStr = numericMatch.join('');
+    const target = parseFloat(numericStr);
+    if (isNaN(target)) {
+      setDisplayValue(value);
+      return;
+    }
+    let start = 0;
+    const duration = 1000;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = progress * (2 - progress);
+      const current = Math.floor(start + easeProgress * (target - start));
+      let formatted = String(current);
+      if (str.includes('₹')) {
+        formatted = '₹' + current.toLocaleString('en-IN');
+      } else if (str.includes(',')) {
+        formatted = current.toLocaleString('en-US');
+      } else if (str.includes('%')) {
+        formatted = current + '%';
+      }
+      setDisplayValue(formatted);
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return <>{displayValue}</>;
+}
 
 const CSS = `
 .ev-shell { display: flex; min-height: 100vh; background: #F3F4F9; }
@@ -99,6 +144,23 @@ const CSS = `
 .form-lbl { display: block; font-size: 12px; font-weight: 600; color: #4B5563; margin-bottom: 5px; }
 .form-input { width: 100%; padding: 8px 12px; border: 1.5px solid #E5E7EB; border-radius: 8px; font-size: 13.5px; outline: none; transition: border-color .15s; }
 .form-input:focus { border-color: #4F46E5; }
+
+@keyframes drawPath {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-draw {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: drawPath 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-scale-in {
+  transform-origin: center;
+  animation: scaleIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
 `;
 
 interface Franchise {
@@ -229,7 +291,7 @@ export default function FranchisePage() {
                 </div>
                 <div className="fr-stat-info">
                   <div className="fr-stat-lbl">Total Franchises</div>
-                  <div className="fr-stat-val">{franchises.length}</div>
+                  <div className="fr-stat-val"><AnimatedCount value={franchises.length} /></div>
                   <div className="fr-stat-sub">Across all zones</div>
                 </div>
               </div>
@@ -239,7 +301,7 @@ export default function FranchisePage() {
                 </div>
                 <div className="fr-stat-info">
                   <div className="fr-stat-lbl">Active</div>
-                  <div className="fr-stat-val">{franchises.filter(f => f.status === 'Active').length}</div>
+                  <div className="fr-stat-val"><AnimatedCount value={franchises.filter(f => f.status === 'Active').length} /></div>
                   <div className="fr-stat-sub">{((franchises.filter(f => f.status === 'Active').length / franchises.length) * 100).toFixed(1)}% Active rate</div>
                 </div>
               </div>
@@ -249,7 +311,7 @@ export default function FranchisePage() {
                 </div>
                 <div className="fr-stat-info">
                   <div className="fr-stat-lbl">Pending Approval</div>
-                  <div className="fr-stat-val">{franchises.filter(f => f.approvalStatus === 'Pending').length}</div>
+                  <div className="fr-stat-val"><AnimatedCount value={franchises.filter(f => f.approvalStatus === 'Pending').length} /></div>
                   <div className="fr-stat-sub">Requires review</div>
                 </div>
               </div>
@@ -259,7 +321,7 @@ export default function FranchisePage() {
                 </div>
                 <div className="fr-stat-info">
                   <div className="fr-stat-lbl">Inactive / Suspended</div>
-                  <div className="fr-stat-val">{franchises.filter(f => f.status === 'Inactive' || f.status === 'Suspended').length}</div>
+                  <div className="fr-stat-val"><AnimatedCount value={franchises.filter(f => f.status === 'Inactive' || f.status === 'Suspended').length} /></div>
                   <div className="fr-stat-sub">Deactivated accounts</div>
                 </div>
               </div>
@@ -269,7 +331,7 @@ export default function FranchisePage() {
                 </div>
                 <div className="fr-stat-info">
                   <div className="fr-stat-lbl">Total Revenue (MTD)</div>
-                  <div className="fr-stat-val">₹{franchises.reduce((acc, f) => acc + f.revenue, 0).toLocaleString('en-IN')}</div>
+                  <div className="fr-stat-val"><AnimatedCount value={'₹' + franchises.reduce((acc, f) => acc + f.revenue, 0).toLocaleString('en-IN')} /></div>
                   <div className="fr-stat-sub">↑ 12.6% vs last month</div>
                 </div>
               </div>

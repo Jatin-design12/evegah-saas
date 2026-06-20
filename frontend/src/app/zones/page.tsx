@@ -1,10 +1,55 @@
 "use client";
-import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useState, useMemo, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+
+function AnimatedCount({ value }: { value: string | number }) {
+  const [displayValue, setDisplayValue] = useState<string | number>(value);
+
+  useEffect(() => {
+    const str = String(value);
+    const numericMatch = str.match(/[\d.]+/g);
+    if (!numericMatch) {
+      setDisplayValue(value);
+      return;
+    }
+    const numericStr = numericMatch.join('');
+    const target = parseFloat(numericStr);
+    if (isNaN(target)) {
+      setDisplayValue(value);
+      return;
+    }
+    let start = 0;
+    const duration = 1000;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = progress * (2 - progress);
+      const current = Math.floor(start + easeProgress * (target - start));
+      let formatted = String(current);
+      if (str.includes('₹')) {
+        formatted = '₹' + current.toLocaleString('en-IN');
+      } else if (str.includes(',')) {
+        formatted = current.toLocaleString('en-US');
+      } else if (str.includes('%')) {
+        formatted = current + '%';
+      }
+      setDisplayValue(formatted);
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return <>{displayValue}</>;
+}
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -192,12 +237,12 @@ const CSS = `
 /* Statistics tab classes */
 .zs-kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
 .zs-kpi-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.02); }
-.zs-kpi-ic { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.zs-kpi-ic.purple { background: #FAF5FF; color: #7C3AED; }
-.zs-kpi-ic.green { background: #ECFDF5; color: #059669; }
-.zs-kpi-ic.blue { background: #EFF6FF; color: #2563EB; }
-.zs-kpi-ic.orange { background: #FFF7ED; color: #D97706; }
-.zs-kpi-ic.red { background: #FDF2F8; color: #DB2777; }
+.zs-kpi-ic { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
+.zs-kpi-ic.purple { background: #7C3AED; }
+.zs-kpi-ic.green { background: #10B981; }
+.zs-kpi-ic.blue { background: #3B82F6; }
+.zs-kpi-ic.orange { background: #F97316; }
+.zs-kpi-ic.red { background: #EF4444; }
 .zs-kpi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .zs-kpi-lbl { font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
 .zs-kpi-val { font-size: 19px; font-weight: 800; color: #0F172A; line-height: 1.2; margin-top: 2px; }
@@ -236,7 +281,44 @@ const CSS = `
 .zs-alert-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .zs-alert-txt { font-size: 12px; color: #334155; font-weight: 600; line-height: 1.45; }
 .zs-alert-time { font-size: 10.5px; color: #94A3B8; font-weight: 500; }
+.leaflet-container { width: 100%; height: 100%; z-index: 1; }
+.custom-dashboard-marker { background: transparent !important; border: none !important; }
+
+@keyframes drawPath {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes growBar {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-draw {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawPath 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-draw-large {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: drawPath 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-scale-in {
+  transform-origin: center;
+  animation: scaleIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.animate-grow-bar {
+  transform-origin: bottom;
+  animation: growBar 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
 `;
+
+interface Coordinate {
+  lat: number;
+  lng: number;
+}
 
 interface ZoneData {
   id: string;
@@ -252,6 +334,19 @@ interface ZoneData {
   svgPath: string;
   markerPos: { cx: number; cy: number };
   coordinates: string[];
+  points?: Coordinate[];
+}
+
+function parseCoordinates(coordStrings: string[]): Coordinate[] {
+  return coordStrings.map(str => {
+    const cleaned = str.replace(/^\d+\.\s*/, '');
+    const [latStr, lngStr] = cleaned.split(',');
+    if (!latStr || !lngStr) return { lat: 0, lng: 0 };
+    return {
+      lat: parseFloat(latStr.trim()),
+      lng: parseFloat(lngStr.trim())
+    };
+  }).filter(c => c.lat !== 0 && c.lng !== 0);
 }
 
 const ZONES: ZoneData[] = [
@@ -540,29 +635,48 @@ function calculatePolygonAreaKm2(coords: { lat: number; lng: number }[]) {
 function ZoneManagementContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'Zone Map';
+  const initialTab = searchParams.get('tab') || 'Zone List';
 
   const [dbZones, setDbZones] = useState<any[]>([]);
 
-  useEffect(() => {
-    let active = true;
+  const fetchZones = () => {
     api.get('/zones')
       .then(res => {
-        if (active && res && res.data) {
+        if (res && res.data) {
           setDbZones(res.data);
         }
       })
       .catch(err => {
         console.error('Error fetching zones:', err);
       });
-    return () => {
-      active = false;
-    };
+  };
+
+  useEffect(() => {
+    fetchZones();
   }, []);
+
+  const handleDeleteZone = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete the zone "${name}"?`)) return;
+    try {
+      const response = await api.delete(`/zones/${id}`);
+      if (response.status === 'success') {
+        alert('Zone deleted successfully!');
+        fetchZones();
+      } else {
+        alert('Failed to delete zone: ' + response.message);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Error deleting zone: ' + err.message);
+    }
+  };
 
   const zonesList = useMemo(() => {
     if (dbZones.length === 0) {
-      return ZONES;
+      return ZONES.map(z => ({
+        ...z,
+        points: parseCoordinates(z.coordinates)
+      }));
     }
     
     return dbZones.map((dbz, index) => {
@@ -573,12 +687,14 @@ function ZoneManagementContent() {
       let markerPos = { cx: 250, cy: 230 };
       let coordinates: string[] = [];
       let areaKm2 = 0;
+      let zonePts: Coordinate[] = [];
       
       if (matchedStatic) {
         svgPath = matchedStatic.svgPath;
         markerPos = matchedStatic.markerPos;
         coordinates = matchedStatic.coordinates;
         areaKm2 = matchedStatic.areaKm2;
+        zonePts = parseCoordinates(matchedStatic.coordinates);
       } else if (pts.length > 0) {
         svgPath = pts.map((p: any, idx: number) => {
           const { x, y } = latLngToSvg(p.lat, p.lng);
@@ -595,6 +711,7 @@ function ZoneManagementContent() {
         
         coordinates = pts.map((p: any, idx: number) => `${idx + 1}. ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`);
         areaKm2 = parseFloat(calculatePolygonAreaKm2(pts).toFixed(2));
+        zonePts = pts;
       }
       
       const colors = ['#7C3AED', '#10B981', '#F97316', '#3B82F6', '#8B5CF6', '#EF4444', '#10B981', '#3B82F6', '#F97316', '#EC4899'];
@@ -613,7 +730,8 @@ function ZoneManagementContent() {
         color,
         svgPath,
         markerPos,
-        coordinates
+        coordinates,
+        points: zonePts
       } as ZoneData;
     });
   }, [dbZones]);
@@ -621,6 +739,220 @@ function ZoneManagementContent() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedZoneId, setSelectedZoneId] = useState('1');
   const [subtab, setSubtab] = useState('Geo Fence');
+
+  // Leaflet integration state and references
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const mapRef = useRef<any>(null);
+  const polygonsRef = useRef<Record<string, any>>({});
+  const markersRef = useRef<Record<string, any>>({});
+
+  const getPointsCenter = (coords: Coordinate[]) => {
+    if (coords.length === 0) return { lat: 28.6315, lng: 77.2197 };
+    let sumLat = 0, sumLng = 0;
+    coords.forEach(c => {
+      sumLat += c.lat;
+      sumLng += c.lng;
+    });
+    return { lat: sumLat / coords.length, lng: sumLng / coords.length };
+  };
+
+  // Load Leaflet dynamically
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if ((window as any).L) {
+      setLeafletLoaded(true);
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.async = true;
+    script.onload = () => {
+      setLeafletLoaded(true);
+    };
+    document.body.appendChild(script);
+  }, []);
+
+  // Map Initialization
+  useEffect(() => {
+    if (activeTab !== 'Zone Map' || !leafletLoaded) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    const container = document.getElementById('dashboard-zone-map');
+    if (!container) return;
+
+    // Determine initial center
+    let initialCenter = [28.6315, 77.2197]; // Default Delhi CP
+    const cpZone = zonesList.find(z => z.id === '1');
+    if (cpZone && cpZone.points && cpZone.points.length > 0) {
+      initialCenter = [cpZone.points[0].lat, cpZone.points[0].lng];
+    }
+
+    const map = L.map('dashboard-zone-map', {
+      center: initialCenter,
+      zoom: 13,
+      zoomControl: false,
+      dragging: true,
+      scrollWheelZoom: true
+    });
+    mapRef.current = map;
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(map);
+
+    const polys: Record<string, any> = {};
+    const markers: Record<string, any> = {};
+
+    zonesList.forEach(z => {
+      if (!z.points || z.points.length < 3) return;
+      const latlngs = z.points.map(pt => [pt.lat, pt.lng]);
+      
+      const poly = L.polygon(latlngs, {
+        color: z.color,
+        fillColor: z.color,
+        fillOpacity: z.id === selectedZoneId ? 0.25 : 0.1,
+        weight: z.id === selectedZoneId ? 3.5 : 2,
+        dashArray: z.id === selectedZoneId ? undefined : '4, 4'
+      }).addTo(map);
+
+      poly.on('click', () => {
+        setSelectedZoneId(z.id);
+      });
+
+      polys[z.id] = poly;
+
+      // Add marker
+      const center = getPointsCenter(z.points);
+      const marker = L.marker([center.lat, center.lng], {
+        icon: L.divIcon({
+          className: 'custom-dashboard-marker',
+          html: `
+            <div style="cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+              <div style="width: ${z.id === selectedZoneId ? '12px' : '8px'}; height: ${z.id === selectedZoneId ? '12px' : '8px'}; border-radius: 50%; background: ${z.color}; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+              ${z.id === selectedZoneId ? `
+                <div style="position: absolute; bottom: 16px; background: #2a195c; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.25);">
+                  ${z.name}
+                </div>
+              ` : ''}
+            </div>
+          `,
+          iconSize: [60, 60],
+          iconAnchor: [30, 30]
+        })
+      }).addTo(map);
+
+      marker.on('click', () => {
+        setSelectedZoneId(z.id);
+      });
+
+      markers[z.id] = marker;
+    });
+
+    polygonsRef.current = polys;
+    markersRef.current = markers;
+
+    // Pan/fit bounds of selected zone
+    const activeZoneObj = zonesList.find(z => z.id === selectedZoneId);
+    if (activeZoneObj && activeZoneObj.points && activeZoneObj.points.length > 0) {
+      const activePoly = polys[selectedZoneId];
+      if (activePoly) {
+        map.fitBounds(activePoly.getBounds(), { padding: [50, 50], maxZoom: 14 });
+      }
+    }
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [activeTab, leafletLoaded, zonesList]);
+
+  // Handle selectedZoneId change
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    const polys = polygonsRef.current;
+    const markers = markersRef.current;
+
+    zonesList.forEach(z => {
+      const poly = polys[z.id];
+      const marker = markers[z.id];
+      const isSelected = z.id === selectedZoneId;
+
+      if (poly) {
+        poly.setStyle({
+          fillOpacity: isSelected ? 0.25 : 0.1,
+          weight: isSelected ? 3.5 : 2,
+          dashArray: isSelected ? undefined : '4, 4'
+        });
+        if (isSelected) {
+          poly.bringToFront();
+        }
+      }
+
+      if (marker) {
+        marker.setIcon(L.divIcon({
+          className: 'custom-dashboard-marker',
+          html: `
+            <div style="cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+              <div style="width: ${isSelected ? '12px' : '8px'}; height: ${isSelected ? '12px' : '8px'}; border-radius: 50%; background: ${z.color}; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+              ${isSelected ? `
+                <div style="position: absolute; bottom: 16px; background: #2a195c; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.25);">
+                  ${z.name}
+                </div>
+              ` : ''}
+            </div>
+          `,
+          iconSize: [60, 60],
+          iconAnchor: [30, 30]
+        }));
+      }
+    });
+
+    const activeZoneObj = zonesList.find(z => z.id === selectedZoneId);
+    if (activeZoneObj && activeZoneObj.points && activeZoneObj.points.length > 0 && mapRef.current) {
+      const poly = polys[selectedZoneId];
+      if (poly) {
+        mapRef.current.fitBounds(poly.getBounds(), { padding: [50, 50], maxZoom: 14 });
+      }
+    }
+  }, [selectedZoneId, zonesList]);
+
+  const handleMapSearch = async () => {
+    if (!mapSearchQuery.trim()) return;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearchQuery)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const newLat = parseFloat(lat);
+        const newLng = parseFloat(lon);
+        if (mapRef.current) {
+          mapRef.current.setView([newLat, newLng], 14);
+        }
+      } else {
+        alert("Location not found.");
+      }
+    } catch (err) {
+      console.error("Error searching location:", err);
+    }
+  };
 
   // Filters for Zone Map Tab
   const [zoneSearch, setZoneSearch] = useState('');
@@ -783,7 +1115,7 @@ function ZoneManagementContent() {
             {/* Tab switch */}
             <div className="zm-tabs-card">
               <div className="zm-tabs-list">
-                {['Zone Map', 'Zone List', 'Geo Fence Logs', 'Zone Statistics'].map((tab) => (
+                {['Zone List', 'Zone Map', 'Geo Fence Logs', 'Zone Statistics'].map((tab) => (
                   <button
                     key={tab}
                     className={`zm-tab ${activeTab === tab ? 'active' : ''}`}
@@ -840,22 +1172,30 @@ function ZoneManagementContent() {
                     </div>
 
                     {/* Floating Search panel */}
-                    <div className="zm-search-panel">
-                      <button className="zm-search-back-btn" onClick={() => setZoneSearch('')}>
+                    <div className="zm-search-panel" style={{ display: 'flex', alignItems: 'center' }}>
+                      <button className="zm-search-back-btn" onClick={() => setMapSearchQuery('')}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
                         </svg>
                       </button>
-                      <input type="text" className="zm-search-input" placeholder="Search location" value={zoneSearch} onChange={(e) => setZoneSearch(e.target.value)} />
-                      <span className="zm-search-ic">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                      </span>
+                      <input 
+                        type="text" 
+                        className="zm-search-input" 
+                        placeholder="Search location..." 
+                        value={mapSearchQuery} 
+                        onChange={(e) => setMapSearchQuery(e.target.value)} 
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleMapSearch(); }}
+                      />
+                      <button 
+                        onClick={handleMapSearch} 
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#2a195c', padding: '2px 6px' }}
+                      >
+                        Go
+                      </button>
                     </div>
 
                     {/* Floating layers menu */}
-                    <div className="zm-layer-toolbar">
+                    <div className="zm-layer-toolbar" style={{ zIndex: 1000 }}>
                       <button className="zm-layer-btn" onClick={() => alert('Layers option toggled')}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                           <polygon points="12 2 2 7 12 12 22 7 12 2" /><polygon points="2 17 12 22 22 17 2 17" /><polygon points="2 12 12 17 22 12 2 12" />
@@ -872,9 +1212,9 @@ function ZoneManagementContent() {
                     </div>
 
                     {/* Floating Zoom controls */}
-                    <div className="zm-control-toolbar">
-                      <button className="zm-control-btn" onClick={() => alert('Zoom In')}>+</button>
-                      <button className="zm-control-btn" onClick={() => alert('Zoom Out')}>-</button>
+                    <div className="zm-control-toolbar" style={{ zIndex: 1000 }}>
+                      <button className="zm-control-btn" onClick={() => mapRef.current?.zoomIn()}>+</button>
+                      <button className="zm-control-btn" onClick={() => mapRef.current?.zoomOut()}>-</button>
                       <button className="zm-control-btn" onClick={() => alert('Grid overlay loaded')}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -882,98 +1222,28 @@ function ZoneManagementContent() {
                           <line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" />
                         </svg>
                       </button>
-                      <button className="zm-control-btn" onClick={() => alert('Centering to current location')}>
+                      <button className="zm-control-btn" onClick={() => {
+                        const activeZoneObj = zonesList.find(z => z.id === selectedZoneId);
+                        if (activeZoneObj && activeZoneObj.points && activeZoneObj.points.length > 0) {
+                          const activePoly = polygonsRef.current[selectedZoneId];
+                          if (activePoly) {
+                            mapRef.current?.fitBounds(activePoly.getBounds(), { padding: [50, 50], maxZoom: 14 });
+                          }
+                        }
+                      }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
                     </div>
 
-                    {/* SVG Map Drawing - Delhi streets */}
-                    <svg className="zm-map-svg" viewBox="0 0 500 480">
-                      <rect x="0" y="0" width="500" height="480" fill="#EBF0F5" />
-                      
-                      {/* Grid Blocks */}
-                      <g fill="#DEE4EB" stroke="#DFE5EC" strokeWidth="1">
-                        <rect x="10" y="10" width="80" height="50" rx="3" />
-                        <rect x="100" y="10" width="100" height="50" rx="3" />
-                        <rect x="210" y="10" width="120" height="50" rx="3" />
-                        <rect x="340" y="10" width="150" height="50" rx="3" />
-                        <rect x="15" y="70" width="60" height="80" rx="3" />
-                        <rect x="85" y="70" width="60" height="80" rx="3" />
-                        <rect x="15" y="160" width="60" height="80" rx="3" />
-                        <rect x="85" y="160" width="60" height="80" rx="3" />
-                        <rect x="160" y="70" width="100" height="40" rx="3" />
-                        <rect x="270" y="70" width="120" height="50" rx="3" />
-                        <rect x="160" y="120" width="70" height="40" rx="3" />
-                        <rect x="15" y="250" width="115" height="110" rx="3" />
-                        <rect x="15" y="370" width="125" height="90" rx="3" />
-                        <rect x="370" y="220" width="115" height="110" rx="3" />
-                        <rect x="360" y="340" width="125" height="120" rx="3" />
-                      </g>
-
-                      {/* Main Roads */}
-                      <g fill="none" stroke="#FFFFFF" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="250" y1="0" x2="250" y2="480" />
-                        <line x1="0" y1="230" x2="500" y2="230" />
-                        <circle cx="250" cy="230" r="100" />
-                        <circle cx="250" cy="230" r="60" />
-                        <line x1="0" y1="65" x2="500" y2="65" />
-                        <line x1="0" y1="155" x2="500" y2="155" />
-                        <line x1="0" y1="0" x2="500" y2="480" />
-                        <line x1="500" y1="0" x2="0" y2="480" />
-                      </g>
-
-                      {/* Inner road markings line */}
-                      <g fill="none" stroke="#E2E8F0" strokeWidth="1.2" strokeDasharray="3 3">
-                        <line x1="250" y1="0" x2="250" y2="480" />
-                        <line x1="0" y1="230" x2="500" y2="230" />
-                        <circle cx="250" cy="230" r="100" />
-                        <circle cx="250" cy="230" r="60" />
-                      </g>
-
-                      {/* Area Text Labels */}
-                      <g fill="#94A3B8" fontSize="10" fontWeight="700" textAnchor="middle">
-                        <text x="110" y="35" transform="rotate(-5 110 35)">Karol Bagh</text>
-                        <text x="310" y="85">Pahar Ganj</text>
-                        <text x="70" y="270">Rajendra Place</text>
-                        <text x="430" y="260">Pragati Maidan</text>
-                        <text x="360" y="440">India Gate</text>
-                        <text x="180" y="390">Patel Chowk</text>
-                        <text x="250" y="335">Shastri Bhawan</text>
-                      </g>
-
-                      {/* Selected Geofence Polygon Overlay */}
-                      {selectedZone && (
-                        <path
-                          d={selectedZone.svgPath}
-                          fill={selectedZone.color}
-                          fillOpacity="0.12"
-                          stroke={selectedZone.color}
-                          strokeWidth="2.5"
-                          strokeDasharray="4 2"
-                        />
-                      )}
-
-                      {/* Map Markers for active zones */}
-                      {zonesList.map(z => {
-                        const isSelected = z.id === selectedZoneId;
-                        return (
-                          <g key={z.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedZoneId(z.id)}>
-                            <circle cx={z.markerPos.cx} cy={z.markerPos.cy} r={isSelected ? 10 : 6} fill={z.color} fillOpacity="0.3" />
-                            <circle cx={z.markerPos.cx} cy={z.markerPos.cy} r={isSelected ? 5 : 3.5} fill={z.color} />
-                            
-                            {isSelected && (
-                              <g>
-                                <rect x={z.markerPos.cx - 50} y={z.markerPos.cy - 36} width="100" height="22" rx="4" fill="#2a195c" />
-                                <text x={z.markerPos.cx} y={z.markerPos.cy - 22} fill="#FFFFFF" fontSize="9.5" fontWeight="800" textAnchor="middle">{z.name}</text>
-                                <polygon points={`${z.markerPos.cx - 4},${z.markerPos.cy - 14} ${z.markerPos.cx + 4},${z.markerPos.cy - 14} ${z.markerPos.cx},${z.markerPos.cy - 9}`} fill="#2a195c" />
-                              </g>
-                            )}
-                          </g>
-                        );
-                      })}
-                    </svg>
+                    {!leafletLoaded ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748B', fontSize: '13px' }}>
+                        Loading Map...
+                      </div>
+                    ) : (
+                      <div id="dashboard-zone-map" style={{ width: '100%', height: '100%' }} />
+                    )}
                   </div>
 
                   {/* Right: Zones Sidebar list */}
@@ -1062,7 +1332,7 @@ function ZoneManagementContent() {
                   <div className="zm-detail-card">
                     <div className="zm-detail-hdr">
                       <span className="zm-detail-tit">Zone Details</span>
-                      <button className="zm-detail-edit-btn" onClick={() => router.push('/zones/new')}>
+                      <button className="zm-detail-edit-btn" onClick={() => router.push(`/zones/new?id=${selectedZone.id}`)}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                           <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                         </svg>
@@ -1268,11 +1538,11 @@ function ZoneManagementContent() {
                                 <button className="zm-tbl-act-btn" title="View on Map" onClick={() => { setSelectedZoneId(z.id); setActiveTab('Zone Map'); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </button>
-                                <button className="zm-tbl-act-btn" title="Edit Zone" onClick={() => router.push('/zones/new')}>
+                                <button className="zm-tbl-act-btn" title="Edit Zone" onClick={() => router.push(`/zones/new?id=${z.id}`)}>
                                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                 </button>
-                                <button className="zm-tbl-act-btn" title="Delete/More" onClick={() => alert(`Settings for ${z.name}`)}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                                <button className="zm-tbl-act-btn" title="Delete Zone" style={{ borderColor: '#EF4444', color: '#EF4444' }} onClick={() => handleDeleteZone(z.id, z.name)}>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                                 </button>
                               </td>
                             </tr>
@@ -1586,13 +1856,13 @@ function ZoneManagementContent() {
                   
                   <div className="zs-kpi-card">
                     <div className="zs-kpi-ic purple">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                         <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
                       </svg>
                     </div>
                     <div className="zs-kpi-info">
                       <span className="zs-kpi-lbl">Total Vehicles</span>
-                      <span className="zs-kpi-val">24</span>
+                      <span className="zs-kpi-val"><AnimatedCount value="24" /></span>
                       <div className="zs-kpi-trend up">
                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
                         <span>9.1% vs last 7 days</span>
@@ -1602,13 +1872,13 @@ function ZoneManagementContent() {
 
                   <div className="zs-kpi-card">
                     <div className="zs-kpi-ic green">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                       </svg>
                     </div>
                     <div className="zs-kpi-info">
                       <span className="zs-kpi-lbl">Total Renters</span>
-                      <span className="zs-kpi-val">312</span>
+                      <span className="zs-kpi-val"><AnimatedCount value="312" /></span>
                       <div className="zs-kpi-trend up">
                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
                         <span>12.4% vs last 7 days</span>
@@ -1618,13 +1888,13 @@ function ZoneManagementContent() {
 
                   <div className="zs-kpi-card">
                     <div className="zs-kpi-ic blue">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                         <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                       </svg>
                     </div>
                     <div className="zs-kpi-info">
                       <span className="zs-kpi-lbl">Active Rentals</span>
-                      <span className="zs-kpi-val">180</span>
+                      <span className="zs-kpi-val"><AnimatedCount value="180" /></span>
                       <div className="zs-kpi-trend up">
                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
                         <span>8.3% vs last 7 days</span>
@@ -1634,13 +1904,13 @@ function ZoneManagementContent() {
 
                   <div className="zs-kpi-card">
                     <div className="zs-kpi-ic orange">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                         <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                       </svg>
                     </div>
                     <div className="zs-kpi-info">
                       <span className="zs-kpi-lbl">Total Revenue</span>
-                      <span className="zs-kpi-val">₹1,24,560</span>
+                      <span className="zs-kpi-val"><AnimatedCount value="₹1,24,560" /></span>
                       <div className="zs-kpi-trend up">
                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
                         <span>14.7% vs last 7 days</span>
@@ -1650,13 +1920,13 @@ function ZoneManagementContent() {
 
                   <div className="zs-kpi-card">
                     <div className="zs-kpi-ic green">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                         <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="21" y2="21"/>
                       </svg>
                     </div>
                     <div className="zs-kpi-info">
                       <span className="zs-kpi-lbl">Battery Swaps</span>
-                      <span className="zs-kpi-val">96</span>
+                      <span className="zs-kpi-val"><AnimatedCount value="96" /></span>
                       <div className="zs-kpi-trend up">
                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
                         <span>7.6% vs last 7 days</span>
@@ -1666,13 +1936,13 @@ function ZoneManagementContent() {
 
                   <div className="zs-kpi-card">
                     <div className="zs-kpi-ic red">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                         <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                       </svg>
                     </div>
                     <div className="zs-kpi-info">
                       <span className="zs-kpi-lbl">Alerts</span>
-                      <span className="zs-kpi-val">8</span>
+                      <span className="zs-kpi-val"><AnimatedCount value="8" /></span>
                       <div className="zs-kpi-trend down">
                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
                         <span>20% vs last 7 days</span>
@@ -1714,7 +1984,7 @@ function ZoneManagementContent() {
                           <text x="22" y="143" textAnchor="end">25%</text>
                         </g>
                         <path d="M 30,130 Q 75,100 120,95 T 210,80 T 300,50 L 300,140 L 30,140 Z" fill="url(#util-grad)" />
-                        <path d="M 30,130 Q 75,100 120,95 T 210,80 T 300,50" fill="none" stroke="#8B5CF6" strokeWidth="2.5" />
+                        <path className="animate-draw-large" d="M 30,130 Q 75,100 120,95 T 210,80 T 300,50" fill="none" stroke="#8B5CF6" strokeWidth="2.5" />
                         <circle cx="300" cy="50" r="4.5" fill="#8B5CF6" stroke="#fff" strokeWidth="1.5" />
                         <g fill="#94A3B8" fontSize="8.5" fontWeight="700" textAnchor="middle">
                           <text x="30" y="160">14 May</text>
@@ -1755,7 +2025,7 @@ function ZoneManagementContent() {
                           <text x="22" y="143" textAnchor="end">50</text>
                         </g>
                         <path d="M 30,130 Q 75,120 120,80 T 210,50 T 300,75 L 300,140 L 30,140 Z" fill="url(#rent-grad)" />
-                        <path d="M 30,130 Q 75,120 120,80 T 210,50 T 300,75" fill="none" stroke="#2563EB" strokeWidth="2.5" />
+                        <path className="animate-draw-large" d="M 30,130 Q 75,120 120,80 T 210,50 T 300,75" fill="none" stroke="#2563EB" strokeWidth="2.5" />
                         <circle cx="210" cy="50" r="4.5" fill="#2563EB" stroke="#fff" strokeWidth="1.5" />
                         <g fill="#94A3B8" fontSize="8.5" fontWeight="700" textAnchor="middle">
                           <text x="30" y="160">14 May</text>
@@ -1790,13 +2060,13 @@ function ZoneManagementContent() {
                           <text x="22" y="143" textAnchor="end">10K</text>
                         </g>
                         <g fill="#6366F1">
-                          <rect x="42" y="80" width="14" height="60" rx="3" />
-                          <rect x="80" y="90" width="14" height="50" rx="3" />
-                          <rect x="118" y="55" width="14" height="85" rx="3" />
-                          <rect x="156" y="45" width="14" height="95" rx="3" />
-                          <rect x="194" y="60" width="14" height="80" rx="3" />
-                          <rect x="232" y="55" width="14" height="85" rx="3" />
-                          <rect x="270" y="32" width="14" height="108" rx="3" />
+                          <rect className="animate-grow-bar" x="42" y="80" width="14" height="60" rx="3" />
+                          <rect className="animate-grow-bar" x="80" y="90" width="14" height="50" rx="3" />
+                          <rect className="animate-grow-bar" x="118" y="55" width="14" height="85" rx="3" />
+                          <rect className="animate-grow-bar" x="156" y="45" width="14" height="95" rx="3" />
+                          <rect className="animate-grow-bar" x="194" y="60" width="14" height="80" rx="3" />
+                          <rect className="animate-grow-bar" x="232" y="55" width="14" height="85" rx="3" />
+                          <rect className="animate-grow-bar" x="270" y="32" width="14" height="108" rx="3" />
                         </g>
                         <g fill="#94A3B8" fontSize="8.5" fontWeight="700" textAnchor="middle">
                           <text x="49" y="160">14 May</text>

@@ -1,7 +1,52 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
+
+function AnimatedCount({ value }: { value: string | number }) {
+  const [displayValue, setDisplayValue] = useState<string | number>(value);
+
+  useEffect(() => {
+    const str = String(value);
+    const numericMatch = str.match(/[\d.]+/g);
+    if (!numericMatch) {
+      setDisplayValue(value);
+      return;
+    }
+    const numericStr = numericMatch.join('');
+    const target = parseFloat(numericStr);
+    if (isNaN(target)) {
+      setDisplayValue(value);
+      return;
+    }
+    let start = 0;
+    const duration = 1000;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = progress * (2 - progress);
+      const current = Math.floor(start + easeProgress * (target - start));
+      let formatted = String(current);
+      if (str.includes('₹')) {
+        formatted = '₹' + current.toLocaleString('en-IN');
+      } else if (str.includes(',')) {
+        formatted = current.toLocaleString('en-US');
+      } else if (str.includes('%')) {
+        formatted = current + '%';
+      }
+      setDisplayValue(formatted);
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return <>{displayValue}</>;
+}
 
 const CSS = `
 .rep-shell { display: flex; min-height: 100vh; background: #F8FAFC; font-family: 'Inter', sans-serif; }
@@ -61,11 +106,11 @@ const CSS = `
 .rep-kpis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .rep-kpi-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.02); }
 .rep-kpi-ic { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.ic-purple { background: #EEF2FF; color: #2a195c; }
-.ic-green { background: #ECFDF5; color: #059669; }
-.ic-blue { background: #EFF6FF; color: #2563EB; }
-.ic-orange { background: #FFF7ED; color: #EA580C; }
-.ic-red { background: #FEE2E2; color: #DC2626; }
+.ic-purple { background: #7C3AED; color: #fff; }
+.ic-green { background: #10B981; color: #fff; }
+.ic-blue { background: #3B82F6; color: #fff; }
+.ic-orange { background: #F97316; color: #fff; }
+.ic-red { background: #EF4444; color: #fff; }
 
 .rep-kpi-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .rep-kpi-lbl { font-size: 11.5px; color: #64748B; font-weight: 600; margin-bottom: 4px; }
@@ -89,8 +134,8 @@ const CSS = `
 /* Donut Legend styles */
 .rep-donut-layout { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
 .rep-donut-vis { position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; }
-.rep-donut-center { position: absolute; text-align: center; }
-.rep-donut-num { font-size: 15px; font-weight: 800; color: #1E293B; }
+.rep-donut-center { position: absolute; text-align: center; width: 80px; }
+.rep-donut-num { font-size: 13.5px; font-weight: 800; color: #1E293B; word-break: break-all; }
 .rep-donut-lbl { font-size: 10px; color: #64748B; margin-top: 1px; font-weight: 500; }
 .rep-donut-legend { width: 100%; display: flex; flex-direction: column; gap: 6px; }
 .rep-leg-item { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; }
@@ -125,27 +170,361 @@ const CSS = `
 .rep-pgb:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .rep-limit-select { padding: 6px 10px; border: 1.5px solid #E2E8F0; border-radius: 6px; font-size: 12px; font-weight: 600; outline: none; background: #fff; color: #475569; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; background-size: 10px; padding-right: 24px; }
+
+@keyframes drawPath {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes growBar {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-draw {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawPath 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-draw-large {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: drawPath 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-scale-in {
+  transform-origin: center;
+  animation: scaleIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.animate-grow-bar {
+  transform-origin: bottom;
+  animation: growBar 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
 `;
 
-interface FranchiseRow {
-  name: string;
-  vehicles: number;
-  rentals: number;
-  revenue: number;
-  transactions: number;
-  swaps: number;
-  utilization: number;
-  collectionPct: number;
-  overdue: number;
+// Dynamic tab structures
+interface KPI {
+  label: string;
+  value: string;
+  delta: string;
+  trend: 'up' | 'down';
+  theme: 'purple' | 'green' | 'blue' | 'orange' | 'red';
+  iconText: string;
+  iconSvg?: React.ReactNode;
 }
 
-const FRANCHISE_DATA: FranchiseRow[] = [
-  { name: 'Connaught Place', vehicles: 160, rentals: 180, revenue: 124560, transactions: 620, swaps: 245, utilization: 74.6, collectionPct: 98.2, overdue: 8 },
-  { name: 'Karol Bagh', vehicles: 152, rentals: 152, revenue: 98230, transactions: 480, swaps: 190, utilization: 71.2, collectionPct: 96.5, overdue: 6 },
-  { name: 'Paharganj', vehicles: 120, rentals: 120, revenue: 76890, transactions: 392, swaps: 152, utilization: 68.4, collectionPct: 95.1, overdue: 12 },
-  { name: 'Rajendra Place', vehicles: 98, rentals: 98, revenue: 24450, transactions: 210, swaps: 98, utilization: 65.1, collectionPct: 97.3, overdue: 5 },
-  { name: 'Pragati Maidan', vehicles: 86, rentals: 86, revenue: 840, transactions: 54, swaps: 45, utilization: 61.3, collectionPct: 94.8, overdue: 25 }
-];
+interface Slice {
+  name: string;
+  val: string;
+  pct: string;
+  color: string;
+  dashArray: string;
+  dashOffset: string;
+}
+
+interface ChartData {
+  lineTitle: string;
+  linePath: string;
+  linePoints: { cx: number; cy: number }[];
+  lineXLabels: string[];
+  lineYValues: string[];
+  donutTitle: string;
+  donutTotal: string;
+  donutSlices: Slice[];
+  barTitle: string;
+  barHeights: number[];
+  barXLabels: string[];
+}
+
+interface TableData {
+  title: string;
+  headers: string[];
+  rows: (string | number)[][];
+}
+
+interface TabConfig {
+  subtitle: string;
+  kpis: KPI[];
+  charts: ChartData;
+  table: TableData;
+}
+
+const TABS_CONFIG: Record<string, TabConfig> = {
+  'Franchise Report': {
+    subtitle: 'View and analyze franchise performance and operational insights.',
+    kpis: [
+      { label: 'Total Revenue (MTD)', value: '₹3,24,850', delta: '12.6%', trend: 'up', theme: 'purple', iconText: '₹' },
+      { label: 'Total Rentals (MTD)', value: '1,248', delta: '9.4%', trend: 'up', theme: 'green', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M17 2.1l4 4-4 4M3 21.9l-4-4 4-4" /><path d="M21 6.1H9a4 4 0 0 0-4 4v5m-2 1.8h12a4 4 0 0 0 4-4v-5" /></svg> },
+      { label: 'Total Transactions (MTD)', value: '2,156', delta: '8.7%', trend: 'up', theme: 'blue', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> },
+      { label: 'Total Battery Swaps (MTD)', value: '842', delta: '11.8%', trend: 'up', theme: 'orange', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="1" y="6" width="18" height="12" rx="2" /><line x1="23" y1="13" x2="23" y2="11" /><polyline points="7 12 11 8 11 12 15 12" /></svg> },
+      { label: 'Overdue Rentals', value: '56', delta: '5.2%', trend: 'up', theme: 'red', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg> }
+    ],
+    charts: {
+      lineTitle: 'Revenue Overview',
+      linePath: 'M 10 140 Q 90 120 170 80 T 330 90 T 490 40',
+      linePoints: [{ cx: 10, cy: 140 }, { cx: 90, cy: 120 }, { cx: 170, cy: 80 }, { cx: 250, cy: 95 }, { cx: 330, cy: 90 }, { cx: 410, cy: 110 }, { cx: 490, cy: 40 }],
+      lineXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'],
+      lineYValues: ['₹0', '₹25k', '₹50k', '₹75k', '₹100k'],
+      donutTitle: 'Revenue by Franchise',
+      donutTotal: '₹3.24L',
+      donutSlices: [
+        { name: 'Connaught Place', val: '₹1.24L', pct: '38.3%', color: '#7C3AED', dashArray: '38.3 61.7', dashOffset: '0' },
+        { name: 'Karol Bagh', val: '₹98K', pct: '30.2%', color: '#3B82F6', dashArray: '30.2 69.8', dashOffset: '-38.3' },
+        { name: 'Paharganj', val: '₹76K', pct: '23.7%', color: '#EAB308', dashArray: '23.7 76.3', dashOffset: '-68.5' },
+        { name: 'Rajendra Place', val: '₹24K', pct: '7.5%', color: '#10B981', dashArray: '7.5 92.5', dashOffset: '-92.2' },
+        { name: 'Pragati Maidan', val: '₹840', pct: '0.3%', color: '#F97316', dashArray: '0.3 99.7', dashOffset: '-99.7' }
+      ],
+      barTitle: 'Rental Trend',
+      barHeights: [78, 84, 94, 108, 98, 102, 115],
+      barXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May']
+    },
+    table: {
+      title: 'Franchise Performance',
+      headers: ['Franchise Name', 'Total Vehicles', 'Total Rentals', 'Total Revenue (₹)', 'Total Transactions', 'Battery Swaps', 'Utilization Rate', 'Collection %', 'Overdue Rentals'],
+      rows: [
+        ['Connaught Place', 160, 180, '₹1,24,560', 620, 245, '74.6%', '98.2%', 8],
+        ['Karol Bagh', 152, 152, '₹98,230', 480, 190, '71.2%', '96.5%', 6],
+        ['Paharganj', 120, 120, '₹76,890', 392, 152, '68.4%', '95.1%', 12],
+        ['Rajendra Place', 98, 98, '₹24,450', 210, 98, '65.1%', '97.3%', 5],
+        ['Pragati Maidan', 86, 86, '₹840', 54, 45, '61.3%', '94.8%', 25]
+      ]
+    }
+  },
+  'Vehicle Report': {
+    subtitle: 'Track fleet utilization, vehicle statuses, and average active cycles.',
+    kpis: [
+      { label: 'Total Fleet Size', value: '616', delta: '5.4%', trend: 'up', theme: 'blue', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
+      { label: 'Active Vehicles', value: '458', delta: '8.2%', trend: 'up', theme: 'green', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> },
+      { label: 'Idle Vehicles', value: '122', delta: '4.1%', trend: 'down', theme: 'purple', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> },
+      { label: 'Under Maintenance', value: '36', delta: '12.5%', trend: 'down', theme: 'orange', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+      { label: 'Avg Fleet Utilization', value: '74.8%', delta: '3.2%', trend: 'up', theme: 'purple', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> }
+    ],
+    charts: {
+      lineTitle: 'Fleet Utilization Trend (%)',
+      linePath: 'M 10 120 Q 90 110 170 90 T 330 60 T 490 70',
+      linePoints: [{ cx: 10, cy: 120 }, { cx: 90, cy: 110 }, { cx: 170, cy: 90 }, { cx: 250, cy: 75 }, { cx: 330, cy: 60 }, { cx: 410, cy: 80 }, { cx: 490, cy: 70 }],
+      lineXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'],
+      lineYValues: ['0%', '25%', '50%', '75%', '100%'],
+      donutTitle: 'Fleet Share by Category',
+      donutTotal: '616 Qty',
+      donutSlices: [
+        { name: 'Electric Scooter', val: '385', pct: '62.5%', color: '#7C3AED', dashArray: '62.5 37.5', dashOffset: '0' },
+        { name: 'Cargo EV', val: '150', pct: '24.3%', color: '#3B82F6', dashArray: '24.3 75.7', dashOffset: '-62.5' },
+        { name: 'Electric Cycle', val: '81', pct: '13.2%', color: '#EAB308', dashArray: '13.2 86.8', dashOffset: '-86.8' }
+      ],
+      barTitle: 'Avg Distance Covered (km)',
+      barHeights: [65, 72, 85, 94, 88, 92, 105],
+      barXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May']
+    },
+    table: {
+      title: 'Vehicle Fleet Utilization',
+      headers: ['Vehicle ID', 'Vehicle Number', 'Category', 'Manufacturer', 'Battery ID', 'Current SoC', 'Utilization (hrs/day)', 'Status', 'Last Active'],
+      rows: [
+        ['EV-SC-001', 'KA01AB1234', 'Electric Scooter', 'Evegah', 'BAT-001', '85%', '14.2 hrs', 'Available', '2 mins ago'],
+        ['EV-SC-002', 'KA01AB1235', 'Electric Scooter', 'Evegah', 'BAT-002', '12%', '11.5 hrs', 'Assigned', '1 hr ago'],
+        ['EV-CG-012', 'KA01CD5678', 'Cargo EV', 'Mahindra', 'BAT-089', '94%', '18.0 hrs', 'Available', 'Just Now'],
+        ['EV-SC-003', 'KA01AB1236', 'Electric Scooter', 'Evegah', 'BAT-003', '0%', '0.0 hrs', 'Maintenance', '1 day ago'],
+        ['EV-CY-105', 'KA01EF9012', 'Electric Cycle', 'Hero', 'BAT-156', '45%', '8.4 hrs', 'Available', '15 mins ago']
+      ]
+    }
+  },
+  'Rental Report': {
+    subtitle: 'Analyze user bookings, average trip durations, and rental packages.',
+    kpis: [
+      { label: 'Active Rentals', value: '384', delta: '10.2%', trend: 'up', theme: 'green', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+      { label: 'Completed Rentals', value: '912', delta: '7.6%', trend: 'up', theme: 'blue', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
+      { label: 'Avg Lease Period', value: '14.5 Days', delta: '0.0%', trend: 'up', theme: 'purple', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+      { label: 'Booking Conversion', value: '88.4%', delta: '2.1%', trend: 'up', theme: 'orange', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4M12 8v8"/></svg> },
+      { label: 'Overdue Returns', value: '18', delta: '8.5%', trend: 'down', theme: 'red', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg> }
+    ],
+    charts: {
+      lineTitle: 'Booking Volume Over Time',
+      linePath: 'M 10 130 Q 90 90 170 100 T 330 70 T 490 50',
+      linePoints: [{ cx: 10, cy: 130 }, { cx: 90, cy: 90 }, { cx: 170, cy: 100 }, { cx: 250, cy: 80 }, { cx: 330, cy: 70 }, { cx: 410, cy: 60 }, { cx: 490, cy: 50 }],
+      lineXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'],
+      lineYValues: ['0', '200', '400', '600', '800'],
+      donutTitle: 'Rental Package Share',
+      donutTotal: '1,296 total',
+      donutSlices: [
+        { name: 'Weekly Pro', val: '585', pct: '45.2%', color: '#7C3AED', dashArray: '45.2 54.8', dashOffset: '0' },
+        { name: 'Monthly Starter', val: '395', pct: '30.5%', color: '#3B82F6', dashArray: '30.5 69.5', dashOffset: '-45.2' },
+        { name: 'Daily Lite', val: '198', pct: '15.3%', color: '#EAB308', dashArray: '15.3 84.7', dashOffset: '-75.7' },
+        { name: 'Hourly Swap', val: '118', pct: '9.0%', color: '#10B981', dashArray: '9.0 91.0', dashOffset: '-91.0' }
+      ],
+      barTitle: 'Rentals by Station Hub',
+      barHeights: [90, 80, 75, 60, 45, 55, 65],
+      barXLabels: ['CP', 'Karol Bagh', 'Paharganj', 'Rajendra Pl', 'Pragati M', 'Noida 62', 'Gurgaon']
+    },
+    table: {
+      title: 'Rental Bookings Log',
+      headers: ['Booking ID', 'Customer Name', 'Contact', 'Vehicle ID', 'Package', 'Start Date', 'Expected Return', 'Security Deposit', 'Status'],
+      rows: [
+        ['RID-2026-0012', 'Rohit Sharma', '+91 98765 43210', 'EV-SC-001', 'Weekly Pro', '15 Jun 2026', '22 Jun 2026', '₹1,000', 'Active Ride'],
+        ['RID-2026-0011', 'Neha Gupta', '+91 91254 56789', 'EV-SC-002', 'Monthly Starter', '18 May 2026', '18 Jun 2026', '₹2,000', 'Returned'],
+        ['RID-2026-0010', 'Amit Kumar', '+91 99876 54321', 'EV-CG-012', 'Monthly Business', '01 Jun 2026', '01 Jul 2026', '₹3,000', 'Active Ride'],
+        ['RID-2026-0009', 'Sneha Reddy', '+91 87654 32109', 'EV-CY-105', 'Daily Lite', '19 Jun 2026', '20 Jun 2026', '₹500', 'Extend'],
+        ['RID-2026-0008', 'Vikram Patel', '+91 78945 61230', 'EV-SC-004', 'Weekly Pro', '10 Jun 2026', '17 Jun 2026', '₹1,000', 'Returned']
+      ]
+    }
+  },
+  'Battery Report': {
+    subtitle: 'Monitor smart IoT battery inventory, swap triggers, and temperatures.',
+    kpis: [
+      { label: 'Total Battery Packs', value: '850', delta: '3.8%', trend: 'up', theme: 'purple', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="1" y="6" width="18" height="12" rx="2" /><line x1="23" y1="13" x2="23" y2="11" /><polyline points="7 12 11 8 11 12 15 12" /></svg> },
+      { label: 'Batteries In-Use', value: '642', delta: '6.2%', trend: 'up', theme: 'green', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
+      { label: 'Avg Health (SoH)', value: '94.2%', delta: '0.5%', trend: 'down', theme: 'blue', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+      { label: 'Batteries Charging', value: '168', delta: '2.5%', trend: 'down', theme: 'orange', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> },
+      { label: 'Low SoC Alerts (<20%)', value: '24', delta: '14.2%', trend: 'down', theme: 'red', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg> }
+    ],
+    charts: {
+      lineTitle: 'Daily Swap Frequency',
+      linePath: 'M 10 150 Q 90 130 170 90 T 330 80 T 490 35',
+      linePoints: [{ cx: 10, cy: 150 }, { cx: 90, cy: 130 }, { cx: 170, cy: 90 }, { cx: 250, cy: 95 }, { cx: 330, cy: 80 }, { cx: 410, cy: 60 }, { cx: 490, cy: 35 }],
+      lineXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'],
+      lineYValues: ['0', '100', '200', '300', '400'],
+      donutTitle: 'SoH Health Ranges',
+      donutTotal: '850 Packs',
+      donutSlices: [
+        { name: 'Excellent (>90%)', val: '619', pct: '72.8%', color: '#10B981', dashArray: '72.8 27.2', dashOffset: '0' },
+        { name: 'Good (80-90%)', val: '155', pct: '18.2%', color: '#3B82F6', dashArray: '18.2 81.8', dashOffset: '-72.8' },
+        { name: 'Fair (70-80%)', val: '55', pct: '6.5%', color: '#EAB308', dashArray: '6.5 93.5', dashOffset: '-91.0' },
+        { name: 'Maintenance (<70%)', val: '21', pct: '2.5%', color: '#EF4444', dashArray: '2.5 97.5', dashOffset: '-97.5' }
+      ],
+      barTitle: 'Temperature Range Detail (°C)',
+      barHeights: [74, 78, 86, 92, 85, 80, 75],
+      barXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May']
+    },
+    table: {
+      title: 'Battery Health and SoC Diagnostics',
+      headers: ['Battery ID', 'Status', 'State of Charge', 'State of Health', 'Voltage', 'Current', 'Cycles', 'Current Station', 'Last Swap'],
+      rows: [
+        ['BAT-450X-12340001', 'Idle', '85%', '98%', '51.2V', '2.1A', 42, 'Connaught Place', '1 hr ago'],
+        ['BAT-450X-12340002', 'Assigned', '12%', '95%', '48.1V', '8.4A', 105, 'Karol Bagh', '12 mins ago'],
+        ['BAT-450X-12340003', 'Charging', '94%', '99%', '53.4V', '-15.0A', 14, 'Connaught Place', '30 mins ago'],
+        ['BAT-450X-12340004', 'Alert', '8%', '72%', '46.2V', '0.0A', 280, 'Paharganj', '2 days ago'],
+        ['BAT-450X-12340005', 'Assigned', '45%', '91%', '49.5V', '4.2A', 198, 'Rajendra Place', '4 hrs ago']
+      ]
+    }
+  },
+  'Financial Report': {
+    subtitle: 'Track revenue collections, outstanding balances, and gross margins.',
+    kpis: [
+      { label: 'Gross Earnings', value: '₹8,24,560', delta: '14.2%', trend: 'up', theme: 'purple', iconText: '₹' },
+      { label: 'Rental Income', value: '₹5,12,340', delta: '11.5%', trend: 'up', theme: 'green', iconText: '₹' },
+      { label: 'Swap Charges', value: '₹1,84,220', delta: '16.8%', trend: 'up', theme: 'blue', iconText: '₹' },
+      { label: 'Refunded Deposits', value: '₹84,000', delta: '5.4%', trend: 'down', theme: 'orange', iconText: '₹' },
+      { label: 'Outstanding Dues', value: '₹44,000', delta: '8.2%', trend: 'down', theme: 'red', iconText: '₹' }
+    ],
+    charts: {
+      lineTitle: 'Revenue Collections',
+      linePath: 'M 10 110 Q 90 90 170 60 T 330 80 T 490 30',
+      linePoints: [{ cx: 10, cy: 110 }, { cx: 90, cy: 90 }, { cx: 170, cy: 60 }, { cx: 250, cy: 70 }, { cx: 330, cy: 80 }, { cx: 410, cy: 50 }, { cx: 490, cy: 30 }],
+      lineXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'],
+      lineYValues: ['₹0', '₹50k', '₹100k', '₹150k', '₹200k'],
+      donutTitle: 'Revenue Streams Share',
+      donutTotal: '₹8.24L',
+      donutSlices: [
+        { name: 'Rent Subscriptions', val: '₹5.12L', pct: '62.1%', color: '#7C3AED', dashArray: '62.1 37.9', dashOffset: '0' },
+        { name: 'Battery Swaps', val: '₹1.84L', pct: '22.3%', color: '#3B82F6', dashArray: '22.3 77.7', dashOffset: '-62.1' },
+        { name: 'Penalty Fees', val: '₹87K', pct: '10.6%', color: '#EAB308', dashArray: '10.6 89.4', dashOffset: '-84.4' },
+        { name: 'Security Deposits', val: '₹41K', pct: '5.0%', color: '#10B981', dashArray: '5.0 95.0', dashOffset: '-95.0' }
+      ],
+      barTitle: 'Refunds vs Collections',
+      barHeights: [80, 85, 95, 105, 98, 100, 110],
+      barXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May']
+    },
+    table: {
+      title: 'Financial Transactions Overview',
+      headers: ['Transaction ID', 'Customer', 'Reference Type', 'Payment Mode', 'Rental Package', 'Total Amount', 'Net Tax', 'Status', 'Date'],
+      rows: [
+        ['TXN-2026-8890', 'Rohit Sharma', 'Booking Deposit', 'UPI', 'Weekly Pro', '₹2,500.00', '₹228.81', 'Paid', 'Today'],
+        ['TXN-2026-8889', 'Neha Gupta', 'Monthly Rent', 'Card', 'Monthly Starter', '₹5,000.00', '₹762.71', 'Paid', 'Yesterday'],
+        ['TXN-2026-8888', 'Mohit Singh', 'Rental Extension', 'UPI', 'Daily Lite', '₹500.00', '₹76.27', 'Paid', 'Yesterday'],
+        ['TXN-2026-8887', 'Arjun Sharma', 'Deposit Refund', 'UPI', 'Weekly Pro', '-₹1,000.00', '₹0.00', 'Refunded', '2 days ago'],
+        ['TXN-2026-8886', 'Swati Sharma', 'Penalty Fee', 'Cash', 'Daily Lite', '₹250.00', '₹38.14', 'Paid', '2 days ago']
+      ]
+    }
+  },
+  'Maintenance Report': {
+    subtitle: 'Monitor reported breakdowns, component failures, and service resolution times.',
+    kpis: [
+      { label: 'Total Tickets', value: '142', delta: '6.2%', trend: 'down', theme: 'purple', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
+      { label: 'Pending Repairs', value: '28', delta: '12.4%', trend: 'down', theme: 'red', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> },
+      { label: 'In Progress', value: '14', delta: '0.0%', trend: 'up', theme: 'orange', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> },
+      { label: 'Resolved Tickets', value: '100', delta: '18.6%', trend: 'up', theme: 'green', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="20 6 9 17 4 12"/></svg> },
+      { label: 'Spare Parts Cost', value: '₹45,200', delta: '3.4%', trend: 'down', theme: 'blue', iconText: '₹' }
+    ],
+    charts: {
+      lineTitle: 'Reported Breakdown Issues',
+      linePath: 'M 10 140 Q 90 120 170 110 T 330 90 T 490 60',
+      linePoints: [{ cx: 10, cy: 140 }, { cx: 90, cy: 120 }, { cx: 170, cy: 110 }, { cx: 250, cy: 95 }, { cx: 330, cy: 90 }, { cx: 410, cy: 80 }, { cx: 490, cy: 60 }],
+      lineXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'],
+      lineYValues: ['0', '10', '20', '30', '40'],
+      donutTitle: 'Component Failures',
+      donutTotal: '142 Cases',
+      donutSlices: [
+        { name: 'Battery BMS', val: '55', pct: '38.5%', color: '#7C3AED', dashArray: '38.5 61.5', dashOffset: '0' },
+        { name: 'Tire Puncture', val: '40', pct: '28.2%', color: '#3B82F6', dashArray: '28.2 71.8', dashOffset: '-38.5' },
+        { name: 'Brake/Cable', val: '26', pct: '18.7%', color: '#EAB308', dashArray: '18.7 81.3', dashOffset: '-66.7' },
+        { name: 'GPS Sensor', val: '16', pct: '11.2%', color: '#10B981', dashArray: '11.2 88.8', dashOffset: '-85.4' },
+        { name: 'Body Panel', val: '5', pct: '3.4%', color: '#F97316', dashArray: '3.4 96.6', dashOffset: '-96.6' }
+      ],
+      barTitle: 'Avg Resolution Time (Hours)',
+      barHeights: [70, 75, 82, 90, 84, 80, 85],
+      barXLabels: ['BMS', 'Brake', 'Tire', 'GPS', 'Body', 'Lights', 'Battery']
+    },
+    table: {
+      title: 'Service Tickets Log',
+      headers: ['Ticket ID', 'Vehicle ID', 'Issue Category', 'Severity', 'Reported Date', 'Assigned Tech', 'Parts Replaced', 'Cost (₹)', 'Status'],
+      rows: [
+        ['TKT-2026-091', 'EV-SC-003', 'Battery Overheating', 'Critical', '18 Jun 2026', 'Amit Kumar', 'BMS Module', '₹8,500', 'In Progress'],
+        ['TKT-2026-090', 'EV-SC-005', 'Brake Cable Loose', 'Medium', '17 Jun 2026', 'Rajesh L.', 'Brake Cable', '₹450', 'Resolved'],
+        ['TKT-2026-089', 'EV-SC-008', 'Rear Tire Puncture', 'Low', '17 Jun 2026', 'Rajesh L.', 'Rear Tube', '₹350', 'Resolved'],
+        ['TKT-2026-088', 'EV-CG-012', 'GPS Module Failure', 'High', '16 Jun 2026', 'Suresh K.', 'GPS Antenna', '₹2,200', 'Pending'],
+        ['TKT-2026-087', 'EV-CY-105', 'Chain Slip/Repair', 'Low', '15 Jun 2026', 'Amit Kumar', 'Chain Lubricant', '₹150', 'Resolved']
+      ]
+    }
+  },
+  'User Activity Report': {
+    subtitle: 'Understand DAU/MAU trends, registered riders, and support tickets.',
+    kpis: [
+      { label: 'Total Registered', value: '2,850', delta: '12.6%', trend: 'up', theme: 'blue', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> },
+      { label: 'Daily Active (DAU)', value: '1,450', delta: '15.4%', trend: 'up', theme: 'green', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg> },
+      { label: 'Monthly Active (MAU)', value: '2,120', delta: '9.2%', trend: 'up', theme: 'purple', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> },
+      { label: 'New Registrations', value: '340', delta: '8.7%', trend: 'up', theme: 'orange', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg> },
+      { label: 'Support Tickets', value: '64', delta: '18.2%', trend: 'down', theme: 'red', iconText: '', iconSvg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> }
+    ],
+    charts: {
+      lineTitle: 'Daily Active Users (DAU)',
+      linePath: 'M 10 130 Q 90 100 170 80 T 330 60 T 490 40',
+      linePoints: [{ cx: 10, cy: 130 }, { cx: 90, cy: 100 }, { cx: 170, cy: 80 }, { cx: 250, cy: 75 }, { cx: 330, cy: 60 }, { cx: 410, cy: 55 }, { cx: 490, cy: 40 }],
+      lineXLabels: ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'],
+      lineYValues: ['0', '500', '1k', '1.5k', '2k'],
+      donutTitle: 'Riders by Platform',
+      donutTotal: '2,850 total',
+      donutSlices: [
+        { name: 'Rider App (Android)', val: '1,545', pct: '54.2%', color: '#7C3AED', dashArray: '54.2 45.8', dashOffset: '0' },
+        { name: 'Rider App (iOS)', val: '878', pct: '30.8%', color: '#3B82F6', dashArray: '30.8 69.2', dashOffset: '-54.2' },
+        { name: 'BMS Mobile App', val: '299', pct: '10.5%', color: '#EAB308', dashArray: '10.5 89.5', dashOffset: '-85.0' },
+        { name: 'Admin Portal', val: '128', pct: '4.5%', color: '#10B981', dashArray: '4.5 95.5', dashOffset: '-95.5' }
+      ],
+      barTitle: 'Weekly Rides per User',
+      barHeights: [62, 70, 78, 85, 92, 98, 106],
+      barXLabels: ['1 ride', '2 rides', '3 rides', '4 rides', '5 rides', '6 rides', '7+ rides']
+    },
+    table: {
+      title: 'Rider Activity Analytics',
+      headers: ['Rider ID', 'Name', 'Contact', 'Joined Date', 'Total Rides', 'Total Distance', 'Wallet Balance', 'Status', 'Last Active'],
+      rows: [
+        ['RID-0081', 'Rohit Sharma', '+91 98765 43210', '10 Jan 2026', '42 rides', '384 km', '₹450.00', 'Active', '2 mins ago'],
+        ['RID-0082', 'Neha Gupta', '+91 91254 56789', '15 Feb 2026', '95 rides', '812 km', '₹1,200.00', 'Active', '1 hr ago'],
+        ['RID-0083', 'Amit Kumar', '+91 99876 54321', '01 Mar 2026', '12 rides', '105 km', '₹50.00', 'Idle', '1 day ago'],
+        ['RID-0084', 'Swati Sharma', '+91 66654 33221', '12 Apr 2026', '2 rides', '12 km', '₹0.00', 'Inactive', '2 weeks ago'],
+        ['RID-0085', 'Vikram Patel', '+91 78945 61230', '20 Apr 2026', '56 rides', '514 km', '₹620.00', 'Active', '4 hrs ago']
+      ]
+    }
+  }
+};
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('Franchise Report');
@@ -159,6 +538,186 @@ export default function ReportsPage() {
     'Maintenance Report',
     'User Activity Report'
   ];
+
+  const currentTabConfig = TABS_CONFIG[activeTab] || TABS_CONFIG['Franchise Report'];
+
+  const handleExportPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const config = TABS_CONFIG[activeTab] || TABS_CONFIG['Franchise Report'];
+
+    const tableHeaderHtml = config.table.headers.map(h => `<th>${h}</th>`).join('');
+    const tableRowsHtml = config.table.rows.map(row => {
+      return `<tr>${row.map((cell, cidx) => {
+        const isStrong = cidx === 0 || (activeTab === 'Franchise Report' && cidx === 3) || (activeTab === 'Financial Report' && cidx === 5);
+        return `<td class="${isStrong ? 'strong-cell' : ''}">${cell}</td>`;
+      }).join('')}</tr>`;
+    }).join('');
+
+    const kpisHtml = config.kpis.map(kpi => `
+      <div class="kpi-card">
+        <div class="kpi-lbl">${kpi.label}</div>
+        <div class="kpi-val">${kpi.value}</div>
+        <div class="kpi-delta">${kpi.delta} vs last month</div>
+      </div>
+    `).join('');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>${activeTab} - Evegah SaaS Platform</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 30px; color: #1E293B; background: #fff; line-height: 1.5; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2a195c; padding-bottom: 16px; margin-bottom: 24px; }
+            .logo { font-size: 22px; font-weight: 800; color: #2a195c; }
+            .title-info { text-align: right; }
+            .report-title { font-size: 18px; font-weight: 800; color: #0F172A; }
+            .report-date { font-size: 11px; color: #64748B; margin-top: 4px; }
+            .subtitle { font-size: 13px; color: #475569; margin-bottom: 20px; font-style: italic; }
+            
+            /* KPIs Grid */
+            .kpis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+            .kpi-card { border: 1px solid #E2E8F0; padding: 12px; border-radius: 8px; background: #FAFBFD; text-align: center; }
+            .kpi-lbl { font-size: 9.5px; color: #64748B; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+            .kpi-val { font-size: 16px; font-weight: 800; color: #0F172A; }
+            .kpi-delta { font-size: 9px; color: #10B981; margin-top: 4px; font-weight: bold; }
+
+            /* Charts Layout */
+            .charts-section { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; margin-bottom: 24px; page-break-inside: avoid; }
+            .chart-box { border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; background: #fff; }
+            .chart-title { font-size: 12px; font-weight: 700; color: #0F172A; margin-bottom: 12px; border-bottom: 1px solid #F1F5F9; padding-bottom: 6px; }
+            
+            /* Donut Chart representation */
+            .donut-layout { display: flex; align-items: center; gap: 20px; }
+            .donut-vis { position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+            .donut-legend { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+            .legend-item { display: flex; justify-content: space-between; font-size: 10.5px; }
+            .legend-name { color: #64748B; }
+            .legend-val { font-weight: 700; color: #1E293B; }
+
+            /* Table Styles */
+            .table-section { margin-top: 20px; }
+            .table-title { font-size: 13px; font-weight: 700; color: #0F172A; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+            th { background: #F8FAFC; border-bottom: 2px solid #CBD5E1; color: #475569; font-weight: 700; text-transform: uppercase; text-align: left; padding: 8px 10px; }
+            td { border-bottom: 1px solid #E2E8F0; padding: 8px 10px; color: #334155; }
+            tr:nth-child(even) td { background: #FAFBFD; }
+            .strong-cell { font-weight: 700; color: #0F172A; }
+
+            @media print {
+              body { padding: 0; }
+              .charts-section { page-break-inside: avoid; }
+              table { page-break-inside: auto; }
+              tr { page-break-inside: avoid; page-break-after: auto; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">Evegah</div>
+            <div class="title-info">
+              <div class="report-title">${activeTab}</div>
+              <div class="report-date">Zone: Connaught Place Zone | Date: 20 May 2024</div>
+            </div>
+          </div>
+          
+          <div class="subtitle">${config.subtitle}</div>
+
+          <div class="kpis-grid">
+            ${kpisHtml}
+          </div>
+
+          <div class="charts-section">
+            <div class="chart-box">
+              <div class="chart-title">${config.charts.lineTitle}</div>
+              <svg width="100%" height="150" viewBox="0 0 500 180" style="overflow: visible;">
+                <line x1="0" y1="160" x2="500" y2="160" stroke="#F1F5F9" stroke-width="1" />
+                <line x1="0" y1="120" x2="500" y2="120" stroke="#F1F5F9" stroke-width="1" />
+                <line x1="0" y1="80" x2="500" y2="80" stroke="#F1F5F9" stroke-width="1" />
+                <line x1="0" y1="40" x2="500" y2="40" stroke="#F1F5F9" stroke-width="1" />
+                <line x1="0" y1="10" x2="500" y2="10" stroke="#F1F5F9" stroke-width="1" />
+                
+                <path d="${config.charts.linePath}" fill="none" stroke="#7C3AED" stroke-width="2.5" />
+                ${config.charts.linePoints.map(pt => `<circle cx="${pt.cx}" cy="${pt.cy}" r="4" fill="#fff" stroke="#7C3AED" stroke-width="2" />`).join('')}
+                
+                ${config.charts.lineXLabels.map((lbl, idx) => `
+                  <text x="${10 + idx * 80}" y="178" font-size="10.5" fill="#64748B" text-anchor="middle">${lbl}</text>
+                `).join('')}
+              </svg>
+            </div>
+
+            <div class="chart-box">
+              <div class="chart-title">${config.charts.donutTitle}</div>
+              <div class="donut-layout">
+                <div class="donut-vis">
+                  <svg width="120" height="120" viewBox="0 0 36 36" style="transform: rotate(-90deg); overflow: visible;">
+                    ${config.charts.donutSlices.map(slice => `
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="15.91"
+                        fill="transparent"
+                        stroke="${slice.color}"
+                        stroke-width="4.2"
+                        stroke-dasharray="${slice.dashArray}"
+                        stroke-dashoffset="${slice.dashOffset}"
+                      />
+                    `).join('')}
+                  </svg>
+                  <div style="position: absolute; text-align: center; width: 120px; top: 48px; left: 0; font-family: sans-serif;">
+                    <div style="font-size: 13.5px; font-weight: 800; color: #1E293B;">${config.charts.donutTotal}</div>
+                    <div style="font-size: 9px; color: #64748B; margin-top: 1px; font-weight: 500; text-transform: uppercase;">Total</div>
+                  </div>
+                </div>
+                <div class="donut-legend">
+                  ${config.charts.donutSlices.map(slice => `
+                    <div class="legend-item">
+                      <span class="legend-name">${slice.name}</span>
+                      <span class="legend-val">${slice.val} (${slice.pct})</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-section">
+            <div class="table-title">${config.table.title}</div>
+            <table>
+              <thead>
+                <tr>${tableHeaderHtml}</tr>
+              </thead>
+              <tbody>
+                ${tableRowsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const getKpiIconThemeClass = (theme: string) => {
+    switch (theme) {
+      case 'purple': return 'ic-purple';
+      case 'green': return 'ic-green';
+      case 'blue': return 'ic-blue';
+      case 'orange': return 'ic-orange';
+      case 'red': return 'ic-red';
+      default: return 'ic-purple';
+    }
+  };
 
   return (
     <>
@@ -180,6 +739,7 @@ export default function ReportsPage() {
                 <span className="rep-user-role">Zone Employee</span>
               </div>
             </div>
+
             <div className="rep-top-actions">
               <button className="rep-zone-select">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -207,7 +767,7 @@ export default function ReportsPage() {
             <div className="rep-title-row">
               <div>
                 <h1 className="rep-h1">Reports</h1>
-                <p className="rep-sub">View and analyze franchise performance and operational insights.</p>
+                <p className="rep-sub">{currentTabConfig.subtitle}</p>
               </div>
               <div className="rep-actions">
                 <button className="rep-btn">
@@ -226,7 +786,7 @@ export default function ReportsPage() {
                   </svg>
                   Schedule Report
                 </button>
-                <button className="rep-btn rep-btn-primary">
+                <button className="rep-btn rep-btn-primary" onClick={handleExportPDF}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ marginRight: 2 }}>
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="7 10 12 15 17 10" />
@@ -307,113 +867,38 @@ export default function ReportsPage() {
 
             {/* KPI Cards Row */}
             <div className="rep-kpis-grid">
-              <div className="rep-kpi-card">
-                <div className="rep-kpi-ic ic-purple">
-                  <span style={{ fontSize: '18px', fontWeight: 'bold' }}>₹</span>
+              {currentTabConfig.kpis.map((kpi, idx) => (
+                <div key={idx} className="rep-kpi-card">
+                  <div className={`rep-kpi-ic ${getKpiIconThemeClass(kpi.theme)}`}>
+                    {kpi.iconText ? (
+                      <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{kpi.iconText}</span>
+                    ) : (
+                      kpi.iconSvg
+                    )}
+                  </div>
+                  <div className="rep-kpi-info">
+                    <span className="rep-kpi-lbl">{kpi.label}</span>
+                    <span className="rep-kpi-val"><AnimatedCount value={kpi.value} /></span>
+                    <span className={`rep-kpi-delta ${kpi.trend === 'up' && kpi.delta !== '0.0%' ? 'delta-up' : kpi.trend === 'down' ? 'delta-down' : ''}`} style={kpi.delta === '0.0%' ? { color: '#64748B' } : undefined}>
+                      {kpi.delta !== '0.0%' && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points={kpi.trend === 'up' ? "18 15 12 9 6 15" : "6 9 12 15 18 9"} />
+                        </svg>
+                      )}
+                      {kpi.delta}
+                      <span className="delta-lbl">vs last month</span>
+                    </span>
+                  </div>
                 </div>
-                <div className="rep-kpi-info">
-                  <span className="rep-kpi-lbl">Total Revenue (MTD)</span>
-                  <span className="rep-kpi-val">₹3,24,850</span>
-                  <span className="rep-kpi-delta delta-up">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <polyline points="18 15 12 9 6 15" />
-                    </svg>
-                    12.6%
-                    <span className="delta-lbl">vs last month</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="rep-kpi-card">
-                <div className="rep-kpi-ic ic-green">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path d="M17 2.1l4 4-4 4M3 21.9l-4-4 4-4" />
-                    <path d="M21 6.1H9a4 4 0 0 0-4 4v5m-2 1.8h12a4 4 0 0 0 4-4v-5" />
-                  </svg>
-                </div>
-                <div className="rep-kpi-info">
-                  <span className="rep-kpi-lbl">Total Rentals (MTD)</span>
-                  <span className="rep-kpi-val">1,248</span>
-                  <span className="rep-kpi-delta delta-up">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <polyline points="18 15 12 9 6 15" />
-                    </svg>
-                    9.4%
-                    <span className="delta-lbl">vs last month</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="rep-kpi-card">
-                <div className="rep-kpi-ic ic-purple">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <line x1="12" y1="17" x2="12" y2="21" />
-                  </svg>
-                </div>
-                <div className="rep-kpi-info">
-                  <span className="rep-kpi-lbl">Total Transactions (MTD)</span>
-                  <span className="rep-kpi-val">2,156</span>
-                  <span className="rep-kpi-delta delta-up">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <polyline points="18 15 12 9 6 15" />
-                    </svg>
-                    8.7%
-                    <span className="delta-lbl">vs last month</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="rep-kpi-card">
-                <div className="rep-kpi-ic ic-orange">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <rect x="1" y="6" width="18" height="12" rx="2" />
-                    <line x1="23" y1="13" x2="23" y2="11" />
-                    <polyline points="7 12 11 8 11 12 15 12" />
-                  </svg>
-                </div>
-                <div className="rep-kpi-info">
-                  <span className="rep-kpi-lbl">Total Battery Swaps (MTD)</span>
-                  <span className="rep-kpi-val">842</span>
-                  <span className="rep-kpi-delta delta-up">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <polyline points="18 15 12 9 6 15" />
-                    </svg>
-                    11.8%
-                    <span className="delta-lbl">vs last month</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="rep-kpi-card">
-                <div className="rep-kpi-ic ic-red">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                </div>
-                <div className="rep-kpi-info">
-                  <span className="rep-kpi-lbl">Overdue Rentals</span>
-                  <span className="rep-kpi-val">56</span>
-                  <span className="rep-kpi-delta delta-up" style={{ color: '#DC2626' }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <polyline points="18 15 12 9 6 15" />
-                    </svg>
-                    5.2%
-                    <span className="delta-lbl">vs last month</span>
-                  </span>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* Charts Row */}
             <div className="rep-charts-grid">
-              {/* Chart 1: Revenue Overview */}
+              {/* Chart 1: Spline chart */}
               <div className="rep-chart-card">
                 <div className="rep-chart-hdr">
-                  <span className="rep-chart-tit">Revenue Overview</span>
+                  <span className="rep-chart-tit">{currentTabConfig.charts.lineTitle}</span>
                 </div>
                 <div className="rep-chart-body">
                   <svg width="100%" height="180" viewBox="0 0 500 180" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
@@ -434,178 +919,112 @@ export default function ReportsPage() {
 
                     {/* Path Area */}
                     <path
-                      d="M 10 140 Q 90 120 170 80 T 330 90 T 490 40 L 490 160 L 10 160 Z"
+                      d={`${currentTabConfig.charts.linePath} L 490 160 L 10 160 Z`}
                       fill="url(#purpleGrad)"
                     />
 
                     {/* Spline Path Line */}
                     <path
-                      d="M 10 140 Q 90 120 170 80 T 330 90 T 490 40"
+                      className="animate-draw-large"
+                      d={currentTabConfig.charts.linePath}
                       fill="none"
                       stroke="#7C3AED"
                       strokeWidth="2.5"
                     />
 
                     {/* Data Points */}
-                    <circle cx="10" cy="140" r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
-                    <circle cx="90" cy="120" r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
-                    <circle cx="170" cy="80" r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
-                    <circle cx="250" cy="95" r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
-                    <circle cx="330" cy="90" r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
-                    <circle cx="410" cy="110" r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
-                    <circle cx="490" cy="40" r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
+                    {currentTabConfig.charts.linePoints.map((pt, index) => (
+                      <circle key={index} cx={pt.cx} cy={pt.cy} r="4.5" fill="#fff" stroke="#7C3AED" strokeWidth="2.5" />
+                    ))}
 
                     {/* Labels */}
-                    <text x="10" y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">14 May</text>
-                    <text x="90" y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">15 May</text>
-                    <text x="170" y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">16 May</text>
-                    <text x="250" y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">17 May</text>
-                    <text x="330" y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">18 May</text>
-                    <text x="410" y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">19 May</text>
-                    <text x="490" y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">20 May</text>
+                    {currentTabConfig.charts.lineXLabels.map((lbl, idx) => (
+                      <text key={idx} x={10 + idx * 80} y="178" fontSize="10.5" fill="#64748B" textAnchor="middle">{lbl}</text>
+                    ))}
 
                     {/* Y values */}
-                    <text x="-8" y="163" fontSize="9.5" fill="#94A3B8" textAnchor="end">₹0</text>
-                    <text x="-8" y="123" fontSize="9.5" fill="#94A3B8" textAnchor="end">₹25k</text>
-                    <text x="-8" y="83" fontSize="9.5" fill="#94A3B8" textAnchor="end">₹50k</text>
-                    <text x="-8" y="43" fontSize="9.5" fill="#94A3B8" textAnchor="end">₹75k</text>
-                    <text x="-8" y="13" fontSize="9.5" fill="#94A3B8" textAnchor="end">₹100k</text>
+                    {currentTabConfig.charts.lineYValues.map((val, idx) => (
+                      <text key={idx} x="-8" y={163 - idx * 37.5} fontSize="9.5" fill="#94A3B8" textAnchor="end">{val}</text>
+                    ))}
                   </svg>
                 </div>
               </div>
 
-              {/* Chart 2: Revenue by Franchise */}
+              {/* Chart 2: Donut chart */}
               <div className="rep-chart-card">
                 <div className="rep-chart-hdr">
-                  <span className="rep-chart-tit">Revenue by Franchise</span>
+                  <span className="rep-chart-tit">{currentTabConfig.charts.donutTitle}</span>
                 </div>
                 <div className="rep-chart-body">
                   <div className="rep-donut-layout">
                     <div className="rep-donut-vis">
-                      {/* SVG Donut representation */}
-                      <svg width="120" height="120" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
-                        {/* CP - 38.3% */}
-                        <circle cx="18" cy="18" r="15.91" fill="transparent" stroke="#7C3AED" strokeWidth="4.2" strokeDasharray="38.3 61.7" strokeDashoffset="0" />
-                        {/* KB - 30.2% */}
-                        <circle cx="18" cy="18" r="15.91" fill="transparent" stroke="#3B82F6" strokeWidth="4.2" strokeDasharray="30.2 69.8" strokeDashoffset="-38.3" />
-                        {/* PG - 23.7% */}
-                        <circle cx="18" cy="18" r="15.91" fill="transparent" stroke="#EAB308" strokeWidth="4.2" strokeDasharray="23.7 76.3" strokeDashoffset="-68.5" />
-                        {/* RP - 7.5% */}
-                        <circle cx="18" cy="18" r="15.91" fill="transparent" stroke="#10B981" strokeWidth="4.2" strokeDasharray="7.5 92.5" strokeDashoffset="-92.2" />
-                        {/* PM - 0.3% */}
-                        <circle cx="18" cy="18" r="15.91" fill="transparent" stroke="#F97316" strokeWidth="4.2" strokeDasharray="0.3 99.7" strokeDashoffset="-99.7" />
+                      <svg className="animate-scale-in" width="120" height="120" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+                        {currentTabConfig.charts.donutSlices.map((slice, index) => (
+                          <circle
+                            key={index}
+                            cx="18"
+                            cy="18"
+                            r="15.91"
+                            fill="transparent"
+                            stroke={slice.color}
+                            strokeWidth="4.2"
+                            strokeDasharray={slice.dashArray}
+                            strokeDashoffset={slice.dashOffset}
+                          />
+                        ))}
                       </svg>
                       <div className="rep-donut-center">
-                        <div className="rep-donut-num">₹3,24,850</div>
+                        <div className="rep-donut-num">{currentTabConfig.charts.donutTotal}</div>
                         <div className="rep-donut-lbl">Total</div>
                       </div>
                     </div>
 
                     <div className="rep-donut-legend">
-                      <div className="rep-leg-item">
-                        <div className="rep-leg-l">
-                          <span className="rep-leg-dot" style={{ background: '#7C3AED' }} />
-                          <span className="rep-leg-name">Connaught Place</span>
+                      {currentTabConfig.charts.donutSlices.map((slice, index) => (
+                        <div key={index} className="rep-leg-item">
+                          <div className="rep-leg-l">
+                            <span className="rep-leg-dot" style={{ background: slice.color }} />
+                            <span className="rep-leg-name">{slice.name}</span>
+                          </div>
+                          <span className="rep-leg-val">{slice.val} <span className="rep-leg-pct">({slice.pct})</span></span>
                         </div>
-                        <span className="rep-leg-val">₹1,24,560 <span className="rep-leg-pct">(38.3%)</span></span>
-                      </div>
-
-                      <div className="rep-leg-item">
-                        <div className="rep-leg-l">
-                          <span className="rep-leg-dot" style={{ background: '#3B82F6' }} />
-                          <span className="rep-leg-name">Karol Bagh</span>
-                        </div>
-                        <span className="rep-leg-val">₹98,230 <span className="rep-leg-pct">(30.2%)</span></span>
-                      </div>
-
-                      <div className="rep-leg-item">
-                        <div className="rep-leg-l">
-                          <span className="rep-leg-dot" style={{ background: '#EAB308' }} />
-                          <span className="rep-leg-name">Paharganj</span>
-                        </div>
-                        <span className="rep-leg-val">₹76,890 <span className="rep-leg-pct">(23.7%)</span></span>
-                      </div>
-
-                      <div className="rep-leg-item">
-                        <div className="rep-leg-l">
-                          <span className="rep-leg-dot" style={{ background: '#10B981' }} />
-                          <span className="rep-leg-name">Rajendra Place</span>
-                        </div>
-                        <span className="rep-leg-val">₹24,450 <span className="rep-leg-pct">(7.5%)</span></span>
-                      </div>
-
-                      <div className="rep-leg-item">
-                        <div className="rep-leg-l">
-                          <span className="rep-leg-dot" style={{ background: '#F97316' }} />
-                          <span className="rep-leg-name">Pragati Maidan</span>
-                        </div>
-                        <span className="rep-leg-val">₹840 <span className="rep-leg-pct">(0.3%)</span></span>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Chart 3: Rental Trend */}
+              {/* Chart 3: Bar chart */}
               <div className="rep-chart-card">
                 <div className="rep-chart-hdr">
-                  <span className="rep-chart-tit">Rental Trend</span>
+                  <span className="rep-chart-tit">{currentTabConfig.charts.barTitle}</span>
                   <select className="rep-limit-select" style={{ border: 'none', background: 'transparent', paddingRight: '18px', padding: '0', fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
                     <option>Last 7 Days</option>
                   </select>
                 </div>
                 <div className="rep-chart-body">
                   <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px' }}>
-                    {/* SVG bar representation */}
                     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '130px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px', width: '100%' }}>
-                      {/* Bar 1 - 14 May: value 180 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
-                        <div style={{ height: '78px', width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
-                      </div>
-                      {/* Bar 2 - 15 May: value 190 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
-                        <div style={{ height: '84px', width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
-                      </div>
-                      {/* Bar 3 - 16 May: value 210 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
-                        <div style={{ height: '94px', width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
-                      </div>
-                      {/* Bar 4 - 17 May: value 240 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
-                        <div style={{ height: '108px', width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
-                      </div>
-                      {/* Bar 5 - 18 May: value 220 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
-                        <div style={{ height: '98px', width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
-                      </div>
-                      {/* Bar 6 - 19 May: value 230 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
-                        <div style={{ height: '102px', width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
-                      </div>
-                      {/* Bar 7 - 20 May: value 250 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
-                        <div style={{ height: '115px', width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
-                      </div>
+                      {currentTabConfig.charts.barHeights.map((h, index) => (
+                        <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1' }}>
+                          <div className="animate-grow-bar" style={{ height: `${h}px`, width: '14px', background: 'linear-gradient(180deg, #7C3AED 0%, #2a195c 100%)', borderRadius: '4px 4px 0 0' }} />
+                        </div>
+                      ))}
                     </div>
-                    {/* X axis labels */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94A3B8' }}>
-                      <span style={{ flex: '1', textAlign: 'center' }}>14 May</span>
-                      <span style={{ flex: '1', textAlign: 'center' }}>15 May</span>
-                      <span style={{ flex: '1', textAlign: 'center' }}>16 May</span>
-                      <span style={{ flex: '1', textAlign: 'center' }}>17 May</span>
-                      <span style={{ flex: '1', textAlign: 'center' }}>18 May</span>
-                      <span style={{ flex: '1', textAlign: 'center' }}>19 May</span>
-                      <span style={{ flex: '1', textAlign: 'center' }}>20 May</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#94A3B8' }}>
+                      {currentTabConfig.charts.barXLabels.map((lbl, idx) => (
+                        <span key={idx} style={{ flex: '1', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lbl}>{lbl}</span>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Franchise Performance Table */}
+            {/* Performance/Details Table */}
             <div className="rep-tcard">
               <div className="rep-tcard-hdr">
-                <span className="rep-tcard-tit">Franchise Performance</span>
+                <span className="rep-tcard-tit">{currentTabConfig.table.title}</span>
                 <button className="rep-btn" style={{ padding: '6px 12px', fontSize: '12px' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ marginRight: 2 }}>
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -620,32 +1039,25 @@ export default function ReportsPage() {
                 <table className="rep-tbl">
                   <thead>
                     <tr>
-                      <th>Franchise Name</th>
-                      <th>Total Vehicles</th>
-                      <th>Total Rentals</th>
-                      <th>Total Revenue (₹)</th>
-                      <th>Total Transactions</th>
-                      <th>Battery Swaps</th>
-                      <th>Utilization Rate</th>
-                      <th>Collection %</th>
-                      <th>Overdue Rentals</th>
+                      {currentTabConfig.table.headers.map((hdr, idx) => (
+                        <th key={idx}>{hdr}</th>
+                      ))}
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {FRANCHISE_DATA.map((row, index) => (
+                    {currentTabConfig.table.rows.map((row, index) => (
                       <tr key={index}>
-                        <td className="rep-tbl-strong">{row.name}</td>
-                        <td>{row.vehicles}</td>
-                        <td>{row.rentals}</td>
-                        <td className="rep-tbl-strong">₹{row.revenue.toLocaleString('en-IN')}</td>
-                        <td>{row.transactions}</td>
-                        <td>{row.swaps}</td>
-                        <td>{row.utilization}%</td>
-                        <td>{row.collectionPct}%</td>
-                        <td>{row.overdue}</td>
+                        {row.map((cell, cidx) => {
+                          const isStrong = cidx === 0 || (activeTab === 'Franchise Report' && cidx === 3) || (activeTab === 'Financial Report' && cidx === 5);
+                          return (
+                            <td key={cidx} className={isStrong ? "rep-tbl-strong" : ""}>
+                              {cell}
+                            </td>
+                          );
+                        })}
                         <td>
-                          <button className="rep-three-dots">
+                          <button className="rep-three-dots" type="button">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                               <circle cx="12" cy="12" r="1" />
                               <circle cx="19" cy="12" r="1" />
@@ -661,15 +1073,15 @@ export default function ReportsPage() {
 
               {/* Table Footer */}
               <div className="rep-tcard-ft">
-                <span className="rep-tcard-ft-lbl">Showing 1 to 5 of 5 entries</span>
+                <span className="rep-tcard-ft-lbl">Showing 1 to {currentTabConfig.table.rows.length} of {currentTabConfig.table.rows.length} entries</span>
                 <div className="rep-pg">
-                  <button className="rep-pgb" disabled>
+                  <button className="rep-pgb" disabled type="button">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="15 18 9 12 15 6" />
                     </svg>
                   </button>
-                  <button className="rep-pgb cur">1</button>
-                  <button className="rep-pgb" disabled>
+                  <button className="rep-pgb cur" type="button">1</button>
+                  <button className="rep-pgb" disabled type="button">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>

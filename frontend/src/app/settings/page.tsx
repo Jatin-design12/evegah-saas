@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import { api } from '@/lib/api';
@@ -143,8 +144,20 @@ input:checked + .se-slider:before { transform: translateX(18px); }
 .se-alert-success { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 12px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
 `;
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [activeTab, setActiveTab] = useState('General');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  useEffect(() => {
+    if (tabParam) {
+      const decoded = decodeURIComponent(tabParam);
+      const validTabs = ['General', 'Ride & Rental', 'Payments', 'Notifications', 'Battery & Swapping', 'Documents', 'Security', 'System'];
+      if (validTabs.includes(decoded)) {
+        setActiveTab(decoded);
+      }
+    }
+  }, [tabParam]);
   const [loading, setLoading] = useState(true);
   const [dbSettings, setDbSettings] = useState<any>(null);
 
@@ -2937,5 +2950,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }

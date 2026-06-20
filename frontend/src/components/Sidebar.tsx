@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
+
 
 /* ── Evegah Logo (uses real logo.png from public/) ── */
 export const EvegahLogo = ({ height = 40 }: { height?: number }) => (
@@ -142,10 +143,88 @@ interface SidebarProps { activePath?: string; isOpen?: boolean }
 
 export default function Sidebar({ activePath, isOpen = true }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const active = activePath || pathname;
 
+  const [userName, setUserName] = useState('Akash Verma');
+  const [userRole, setUserRole] = useState('Zone Admin');
+  const [userAvatar, setUserAvatar] = useState('');
+  const [permissions, setPermissions] = useState<any>(null);
+
+  useEffect(() => {
+    const loadSession = () => {
+      const name = localStorage.getItem("evegah_user_name");
+      const roleVal = localStorage.getItem("evegah_role");
+      const avatar = localStorage.getItem("evegah_user_avatar");
+      if (name) setUserName(name);
+      if (avatar) setUserAvatar(avatar);
+      
+      if (roleVal === 'admin') setUserRole('Platform Admin');
+      else if (roleVal === 'zone_manager') setUserRole('Zone Admin');
+      else if (roleVal === 'first_time_franchise') setUserRole('Franchise Manager');
+      else if (roleVal === 'employee') setUserRole('Employee');
+
+      // Load permissions
+      try {
+        const storedPerms = localStorage.getItem("evegah_user_permissions");
+        if (storedPerms) {
+          setPermissions(JSON.parse(storedPerms));
+        } else {
+          setPermissions(null);
+        }
+      } catch (e) {
+        console.error("Error loading permissions in Sidebar:", e);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      loadSession();
+      window.addEventListener("evegah_role_changed", loadSession);
+      return () => window.removeEventListener("evegah_role_changed", loadSession);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("evegah_role");
+    localStorage.removeItem("evegah_user_name");
+    localStorage.removeItem("evegah_user_email");
+    localStorage.removeItem("evegah_user_avatar");
+    localStorage.removeItem("evegah_user_permissions");
+    window.dispatchEvent(new Event("evegah_role_changed"));
+    router.push('/login');
+  };
+
+  const KEY_MAP: Record<string, string> = {
+    dashboard: 'Dashboard',
+    reg: 'Dashboard',
+    vehicles: 'Vehicles',
+    renters: 'Riders',
+    battery: 'Battery',
+    iot: 'IoT Devices',
+    payment: 'Payments',
+    reports: 'Reports',
+    alerts: 'Alerts',
+    zone: 'Zone Management',
+    franchise: 'Franchise',
+    settings: 'Settings',
+    usersrole: 'Settings',
+    announcements: 'Dashboard',
+    co2: 'Dashboard'
+  };
+
+  const filteredNav = NAV.filter(g => {
+    if (!permissions) return true;
+    const permKey = KEY_MAP[g.key];
+    if (!permKey) return true;
+    const permObj = permissions[permKey];
+    if (permObj && permObj.access === false) {
+      return false;
+    }
+    return true;
+  });
+
   // auto-expand group containing active item
-  const defaultOpen = NAV.reduce((acc, g) => {
+  const defaultOpen = filteredNav.reduce((acc, g) => {
     if (g.children?.some(c => c.href === active)) acc[g.key] = true;
     return acc;
   }, {} as Record<string, boolean>);
@@ -164,7 +243,7 @@ export default function Sidebar({ activePath, isOpen = true }: SidebarProps) {
 
         {/* Nav */}
         <nav className="ev-sb-nav">
-          {NAV.map(g => {
+          {filteredNav.map(g => {
             const isGroupActive = g.href === active || g.children?.some(c => c.href === active);
             const isOpen = open[g.key];
 
@@ -236,14 +315,50 @@ export default function Sidebar({ activePath, isOpen = true }: SidebarProps) {
 
         {/* User profile */}
         <div className="ev-sb-user">
-          <div className="ev-sb-user-av">AV</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="ev-sb-user-name">Akash Verma</div>
-            <div className="ev-sb-user-role">Zone Admin</div>
+          {userAvatar ? (
+            <img 
+              src={userAvatar} 
+              className="ev-sb-user-av" 
+              style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} 
+              alt={userName} 
+            />
+          ) : (
+            <div className="ev-sb-user-av">
+              {userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }} onClick={() => router.push('/settings')}>
+            <div className="ev-sb-user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+            <div className="ev-sb-user-role">{userRole}</div>
           </div>
-          <span style={{ color: '#9CA3AF' }}>{icons.chevdown}</span>
+          <button 
+            onClick={handleLogout}
+            title="Logout" 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: '#EF4444', 
+              cursor: 'pointer', 
+              padding: '6px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderRadius: '6px',
+              transition: 'background 0.2s',
+              flexShrink: 0
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
       </aside>
     </>
   );
 }
+

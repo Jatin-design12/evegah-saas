@@ -1,13 +1,58 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 
+function AnimatedCount({ value }: { value: string | number }) {
+  const [displayValue, setDisplayValue] = useState<string | number>(value);
+
+  useEffect(() => {
+    const str = String(value);
+    const numericMatch = str.match(/[\d.]+/g);
+    if (!numericMatch) {
+      setDisplayValue(value);
+      return;
+    }
+    const numericStr = numericMatch.join('');
+    const target = parseFloat(numericStr);
+    if (isNaN(target)) {
+      setDisplayValue(value);
+      return;
+    }
+    let start = 0;
+    const duration = 1000;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = progress * (2 - progress);
+      const current = Math.floor(start + easeProgress * (target - start));
+      let formatted = String(current);
+      if (str.includes('₹')) {
+        formatted = '₹' + current.toLocaleString('en-IN');
+      } else if (str.includes(',')) {
+        formatted = current.toLocaleString('en-US');
+      } else if (str.includes('%')) {
+        formatted = current + '%';
+      }
+      setDisplayValue(formatted);
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return <>{displayValue}</>;
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.usr-shell { display: flex; min-height: 100vh; background: #F8F9FF; font-family: 'Inter', sans-serif; }
+.usr-shell { display: flex; min-height: 100vh; background: #fff; font-family: 'Inter', sans-serif; }
 .usr-main { margin-left: 230px; display: flex; flex-direction: column; min-height: 100vh; width: calc(100% - 230px); }
 .usr-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 
@@ -109,6 +154,36 @@ const CSS = `
 /* Roles section header */
 .usr-roles-hdr { display: flex; justify-content: space-between; align-items: center; margin-top: 32px; margin-bottom: 16px; }
 .usr-roles-tit { font-size: 16px; font-weight: 800; color: #0F172A; margin: 0; }
+
+@keyframes drawPath {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes growBar {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-draw {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawPath 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-draw-large {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: drawPath 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-scale-in {
+  transform-origin: center;
+  animation: scaleIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.animate-grow-bar {
+  transform-origin: bottom;
+  animation: growBar 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
 `;
 
 interface User {
@@ -119,37 +194,24 @@ interface User {
   role: string;
   zone: string;
   status: 'Active' | 'Inactive';
-  lastLogin: string;
+  last_login: string | null;
+  avatar_url?: string;
 }
 
 interface Role {
+  id: string;
   name: string;
+  code: string;
   description: string;
-  usersCount: number;
-  lastUpdated: string;
+  users_count: number;
+  last_updated: string;
 }
-
-const INITIAL_USERS: User[] = [
-  { id: 'USR-001', name: 'Akash Verma', email: 'akash.verma@evegah.com', mobile: '+91 98765 43210', role: 'Zone Admin', zone: 'Connaught Place Zone', status: 'Active', lastLogin: '20 May 2024, 10:30 AM' },
-  { id: 'USR-002', name: 'Rohit Sharma', email: 'rohit.sharma@evegah.com', mobile: '+91 87654 32109', role: 'Operations Manager', zone: 'Connaught Place Zone', status: 'Active', lastLogin: '20 May 2024, 09:15 AM' },
-  { id: 'USR-003', name: 'Neha Pahuja', email: 'neha.pahuja@evegah.com', mobile: '+91 96543 21098', role: 'Franchise Manager', zone: 'Connaught Place Zone', status: 'Active', lastLogin: '19 May 2024, 06:45 PM' },
-  { id: 'USR-004', name: 'Sandeep Kumar', email: 'sandeep.kumar@evegah.com', mobile: '+91 91234 56789', role: 'Battery Technician', zone: 'Multiple Zones', status: 'Active', lastLogin: '19 May 2024, 04:20 PM' },
-  { id: 'USR-005', name: 'Pooja Mehta', email: 'pooja.mehta@evegah.com', mobile: '+91 99887 77665', role: 'Support Executive', zone: 'Connaught Place Zone', status: 'Inactive', lastLogin: '10 May 2024, 11:10 AM' }
-];
-
-const INITIAL_ROLES: Role[] = [
-  { name: 'Zone Admin', description: 'Full access to all zone operations, users, riders, batteries and reports.', usersCount: 12, lastUpdated: '15 May 2024' },
-  { name: 'Operations Manager', description: 'Manage daily operations, assignments, and rider activities.', usersCount: 18, lastUpdated: '12 May 2024' },
-  { name: 'Franchise Manager', description: 'Manage franchise onboarding, performance and operations.', usersCount: 9, lastUpdated: '10 May 2024' },
-  { name: 'Battery Technician', description: 'Access to battery swap, inventory and maintenance operations.', usersCount: 37, lastUpdated: '08 May 2024' },
-  { name: 'Support Executive', description: 'Handle rider support tickets and communication.', usersCount: 22, lastUpdated: '05 May 2024' }
-];
 
 export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = {}) {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<'users' | 'roles'>(defaultTab === 1 ? 'roles' : 'users');
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [roles, setRoles] = useState<Role[]>(INITIAL_ROLES);
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -157,18 +219,53 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [selectedZone, setSelectedZone] = useState('All Zones');
 
+  const fetchUsers = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiUrl}/users`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  const fetchRoles = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiUrl}/roles`);
+      if (res.ok) {
+        const data = await res.json();
+        setRoles(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchRoles();
+  }, []);
+
   // Filter logic
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
+      const nameVal = u.name || '';
+      const emailVal = u.email || '';
+      const mobileVal = u.mobile || '';
+      const idVal = u.id || '';
       const matchesSearch = 
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.mobile.includes(searchQuery) ||
-        u.id.toLowerCase().includes(searchQuery.toLowerCase());
+        nameVal.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        emailVal.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        mobileVal.includes(searchQuery) ||
+        idVal.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesRole = selectedRole === 'All Roles' || u.role === selectedRole;
       const matchesStatus = selectedStatus === 'All Status' || u.status === selectedStatus;
-      const matchesZone = selectedZone === 'All Zones' || u.zone.includes(selectedZone);
+      const matchesZone = selectedZone === 'All Zones' || (u.zone && u.zone.includes(selectedZone));
 
       return matchesSearch && matchesRole && matchesStatus && matchesZone;
     });
@@ -182,20 +279,25 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
   };
 
   // Avatar helper
-  const getAvatarConfig = (id: string, initials: string) => {
-    if (id === 'USR-001') return { cls: 'purple', text: initials };
-    if (id === 'USR-002') return { cls: 'green', text: initials };
-    if (id === 'USR-003') return { cls: 'orange', text: initials };
-    if (id === 'USR-004') return { cls: 'blue', text: initials };
-    return { cls: 'pink', text: initials };
+  const getAvatarConfig = (id: string, name: string, avatarUrl?: string) => {
+    const initials = name ? name.split(' ').map(n=>n[0]).join('').toUpperCase() : '?';
+    if (avatarUrl) {
+      return { isImage: true, url: avatarUrl, initials };
+    }
+    let cls = 'pink';
+    if (id && id.endsWith('1')) cls = 'purple';
+    else if (id && id.endsWith('2')) cls = 'green';
+    else if (id && id.endsWith('3')) cls = 'orange';
+    else if (id && id.endsWith('4')) cls = 'blue';
+    return { isImage: false, cls, text: initials };
   };
 
   // Role style helper
-  const getRoleStyleClass = (role: string) => {
-    if (role === 'Zone Admin') return 'purple';
-    if (role === 'Operations Manager') return 'blue';
-    if (role === 'Franchise Manager') return 'orange';
-    if (role === 'Battery Technician') return 'teal';
+  const getRoleStyleClass = (roleName: string) => {
+    if (roleName === 'Zone Admin') return 'purple';
+    if (roleName === 'Operations Manager') return 'blue';
+    if (roleName === 'Franchise Manager') return 'orange';
+    if (roleName === 'Battery Technician') return 'teal';
     return 'indigo';
   };
 
@@ -207,17 +309,42 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
     router.push(`/users/detail?id=${id}`);
   };
 
-  const handleDeleteUser = (id: string) => {
+  const handleDeleteUser = async (id: string) => {
     if (confirm(`Are you sure you want to delete user ${id}?`)) {
-      setUsers(prev => prev.filter(u => u.id !== id));
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiUrl}/users/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert('User deleted successfully!');
+          fetchUsers();
+          fetchRoles();
+        } else {
+          const data = await res.json();
+          alert(`Error: ${data.message || 'Failed to delete user'}`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error. Failed to delete user.');
+      }
     }
   };
 
-  const handleScrollToSection = (section: 'users' | 'roles') => {
-    setActiveSection(section);
-    const element = document.getElementById(section === 'users' ? 'users-section' : 'roles-section');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+  const handleDeleteRole = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete role "${name}"?`)) {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiUrl}/roles/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert('Role deleted successfully!');
+          fetchRoles();
+        } else {
+          const data = await res.json();
+          alert(`Error: ${data.message || 'Failed to delete role'}`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error. Failed to delete role.');
+      }
     }
   };
 
@@ -260,7 +387,13 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
             <div className="usr-stats-row">
               <div className="usr-stat-card">
                 <div className="usr-stat-ic ic-purple">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#purpleGrad)" strokeWidth="2.2">
+                    <defs>
+                      <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#7C3AED" />
+                        <stop offset="100%" stopColor="#C084FC" />
+                      </linearGradient>
+                    </defs>
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -269,17 +402,23 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
                 </div>
                 <div className="usr-stat-info">
                   <span className="usr-stat-lbl">Total Users</span>
-                  <span className="usr-stat-val">128</span>
+                  <span className="usr-stat-val"><AnimatedCount value={users.length} /></span>
                   <div className="usr-growth up">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
-                    <span>12.5% vs last 30 days</span>
+                    <span>Active members live</span>
                   </div>
                 </div>
               </div>
 
               <div className="usr-stat-card">
                 <div className="usr-stat-ic ic-green">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#greenGrad)" strokeWidth="2.2">
+                    <defs>
+                      <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#10B981" />
+                        <stop offset="100%" stopColor="#34D399" />
+                      </linearGradient>
+                    </defs>
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                     <polyline points="16 11 18 13 22 9" />
@@ -287,17 +426,23 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
                 </div>
                 <div className="usr-stat-info">
                   <span className="usr-stat-lbl">Active Users</span>
-                  <span className="usr-stat-val">112</span>
+                  <span className="usr-stat-val"><AnimatedCount value={users.filter(u => u.status === 'Active').length} /></span>
                   <div className="usr-growth up">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
-                    <span>10.3% vs last 30 days</span>
+                    <span>System online</span>
                   </div>
                 </div>
               </div>
 
               <div className="usr-stat-card">
                 <div className="usr-stat-ic ic-orange">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#orangeGrad)" strokeWidth="2.2">
+                    <defs>
+                      <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#F97316" />
+                        <stop offset="100%" stopColor="#FDE047" />
+                      </linearGradient>
+                    </defs>
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                     <line x1="12" y1="9" x2="12" y2="13"/>
                     <line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -305,26 +450,32 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
                 </div>
                 <div className="usr-stat-info">
                   <span className="usr-stat-lbl">Inactive Users</span>
-                  <span className="usr-stat-val">16</span>
+                  <span className="usr-stat-val"><AnimatedCount value={users.filter(u => u.status === 'Inactive').length} /></span>
                   <div className="usr-growth down">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
-                    <span>5.6% vs last 30 days</span>
+                    <span>Suspended / offline</span>
                   </div>
                 </div>
               </div>
 
               <div className="usr-stat-card">
                 <div className="usr-stat-ic ic-blue">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#blueGrad)" strokeWidth="2.2">
+                    <defs>
+                      <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#3B82F6" />
+                        <stop offset="100%" stopColor="#93C5FD" />
+                      </linearGradient>
+                    </defs>
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                 </div>
                 <div className="usr-stat-info">
                   <span className="usr-stat-lbl">Total Roles</span>
-                  <span className="usr-stat-val">9</span>
+                  <span className="usr-stat-val"><AnimatedCount value={roles.length} /></span>
                   <div className="usr-growth neutral">
-                    <span>No change vs last 30 days</span>
+                    <span>Access templates</span>
                   </div>
                 </div>
               </div>
@@ -335,234 +486,271 @@ export default function UsersPage({ defaultTab = 0 }: { defaultTab?: number } = 
               <div className="usr-tabs">
                 <button 
                   className={`usr-tab-btn ${activeSection === 'users' ? 'active' : ''}`}
-                  onClick={() => handleScrollToSection('users')}
+                  onClick={() => setActiveSection('users')}
                 >
                   Users
                 </button>
                 <button 
                   className={`usr-tab-btn ${activeSection === 'roles' ? 'active' : ''}`}
-                  onClick={() => handleScrollToSection('roles')}
+                  onClick={() => setActiveSection('roles')}
                 >
                   Roles
                 </button>
               </div>
               <div>
-                <button className="usr-btn-primary" onClick={() => router.push('/users/add')}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  <span>Add User</span>
-                </button>
+                {activeSection === 'users' ? (
+                  <button className="usr-btn-primary" onClick={() => router.push('/users/add')}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span>Add User</span>
+                  </button>
+                ) : (
+                  <button className="usr-btn-primary" onClick={() => router.push('/roles/add')}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span>Add Role</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Users section table */}
-            <div id="users-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px', scrollMarginTop: '100px' }}>
-              
-              {/* Users filters */}
-              <div className="usr-filter-card">
-                <div className="usr-filter-grid">
-                  <div className="usr-search-wrap">
-                    <span className="usr-search-icon">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                      </svg>
-                    </span>
-                    <input 
-                      type="text" 
-                      placeholder="Search by name, email or mobile" 
-                      className="usr-search-input"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <select className="usr-select" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>
-                    <option value="All Roles">All Roles</option>
-                    {roles.map(r => (
-                      <option key={r.name} value={r.name}>{r.name}</option>
-                    ))}
-                  </select>
-                  <select className="usr-select" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
-                    <option value="All Status">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                  <select className="usr-select" value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)}>
-                    <option value="All Zones">All Zones</option>
-                    <option value="Connaught Place Zone">Connaught Place Zone</option>
-                    <option value="Multiple Zones">Multiple Zones</option>
-                  </select>
-                  <div>
-                    {(searchQuery || selectedRole !== 'All Roles' || selectedStatus !== 'All Status' || selectedZone !== 'All Zones') && (
-                      <button className="usr-reset-btn" onClick={resetFilters}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/></svg>
-                        <span>Reset</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Users table */}
-              <div className="usr-tcard">
-                <table className="usr-dt">
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>Role</th>
-                      <th>Zone / Scope</th>
-                      <th>Mobile / Email</th>
-                      <th>Status</th>
-                      <th>Last Login</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#94A3B8' }}>
-                          No users match the active filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredUsers.map(u => {
-                        const initials = u.name.split(' ').map(n=>n[0]).join('').toUpperCase();
-                        const av = getAvatarConfig(u.id, initials);
-                        const rCls = getRoleStyleClass(u.role);
-                        return (
-                          <tr key={u.id}>
-                            <td>
-                              <div className="usr-profile-cell">
-                                <div className={`usr-avatar ${av.cls}`}>{av.text}</div>
-                                <div>
-                                  <div style={{ fontWeight: '700', color: '#0F172A' }}>{u.name}</div>
-                                  <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1.5px' }}>ID: {u.id}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <span className={`role-badge ${rCls}`}>{u.role}</span>
-                            </td>
-                            <td style={{ fontWeight: '500' }}>{u.zone}</td>
-                            <td>
-                              <div style={{ fontWeight: '600', color: '#334155' }}>{u.mobile}</div>
-                              <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2.5px' }}>{u.email}</div>
-                            </td>
-                            <td>
-                              <span className={`usr-badge ${u.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
-                                {u.status}
-                              </span>
-                            </td>
-                            <td style={{ fontSize: '12.5px', color: '#334155', fontWeight: '500' }}>{u.lastLogin}</td>
-                            <td>
-                              <div className="usr-act-btn-group">
-                                <button className="usr-act-btn" title="View details" onClick={() => handleViewUser(u.id)}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                </button>
-                                <button className="usr-act-btn" title="Edit details" onClick={() => handleEditUser(u.id)}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                </button>
-                                <button className="usr-act-btn" title="Delete account" onClick={() => handleDeleteUser(u.id)}>
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Table pagination */}
-                <div className="usr-tcard-ft">
-                  <div className="usr-tcard-ft-lbl">Showing 1 to {filteredUsers.length} of 128 users</div>
-                  <div className="usr-pg">
-                    <button className="usr-pgb" disabled>&lt;</button>
-                    <button className="usr-pgb cur">1</button>
-                    <button className="usr-pgb">2</button>
-                    <button className="usr-pgb">3</button>
-                    <span style={{ color: '#94A3B8', fontSize: '11px', margin: '0 4px', fontWeight: 'bold' }}>...</span>
-                    <button className="usr-pgb">26</button>
-                    <button className="usr-pgb">&gt;</button>
-                    <button className="usr-pgb">&gt;&gt;</button>
-                    <select className="usr-pg-select" defaultValue="5 / page">
-                      <option>5 / page</option>
-                      <option>10 / page</option>
-                      <option>20 / page</option>
+            {/* Conditional Tab Rendering */}
+            {activeSection === 'users' ? (
+              <div id="users-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* Users filters */}
+                <div className="usr-filter-card">
+                  <div className="usr-filter-grid">
+                    <div className="usr-search-wrap">
+                      <span className="usr-search-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <circle cx="11" cy="11" r="8" />
+                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                      </span>
+                      <input 
+                        type="text" 
+                        placeholder="Search by name, email or mobile" 
+                        className="usr-search-input"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <select className="usr-select" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>
+                      <option value="All Roles">All Roles</option>
+                      {roles.map(r => (
+                        <option key={r.id || r.name} value={r.name}>{r.name}</option>
+                      ))}
                     </select>
+                    <select className="usr-select" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+                      <option value="All Status">All Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                    <select className="usr-select" value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)}>
+                      <option value="All Zones">All Zones</option>
+                      <option value="Connaught Place Zone">Connaught Place Zone</option>
+                      <option value="Karol Bagh Zone">Karol Bagh Zone</option>
+                      <option value="Janakpuri Zone">Janakpuri Zone</option>
+                      <option value="Dwarka Zone">Dwarka Zone</option>
+                      <option value="Multiple Zones">Multiple Zones</option>
+                    </select>
+                    <div>
+                      {(searchQuery || selectedRole !== 'All Roles' || selectedStatus !== 'All Status' || selectedZone !== 'All Zones') && (
+                        <button className="usr-reset-btn" onClick={resetFilters}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/></svg>
+                          <span>Reset</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Users table */}
+                <div className="usr-tcard">
+                  <table className="usr-dt">
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Zone / Scope</th>
+                        <th>Mobile / Email</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#94A3B8' }}>
+                            No users match the active filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredUsers.map(u => {
+                          const av = getAvatarConfig(u.id, u.name, u.avatar_url);
+                          const rCls = getRoleStyleClass(u.role);
+                          
+                          let lastLoginText = 'Never logged in';
+                          if (u.last_login) {
+                            lastLoginText = new Date(u.last_login).toLocaleString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            });
+                          }
+
+                          return (
+                            <tr key={u.id}>
+                              <td>
+                                <div className="usr-profile-cell">
+                                  {av.isImage ? (
+                                    <img src={av.url} className="usr-avatar" style={{ objectFit: 'cover', border: '1px solid #E2E8F0' }} alt="User avatar" />
+                                  ) : (
+                                    <div className={`usr-avatar ${av.cls}`}>{av.text}</div>
+                                  )}
+                                  <div>
+                                    <div style={{ fontWeight: '700', color: '#0F172A' }}>{u.name}</div>
+                                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '1.5px' }}>
+                                      ID: {u.id.substring(0, 8)}...
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`role-badge ${rCls}`}>{u.role}</span>
+                              </td>
+                              <td style={{ fontWeight: '500' }}>{u.zone || 'Global'}</td>
+                              <td>
+                                <div style={{ fontWeight: '600', color: '#334155' }}>{u.mobile || 'N/A'}</div>
+                                <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2.5px' }}>{u.email}</div>
+                              </td>
+                              <td>
+                                <span className={`usr-badge ${u.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
+                                  {u.status}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: '12.5px', color: '#334155', fontWeight: '500' }}>{lastLoginText}</td>
+                              <td>
+                                <div className="usr-act-btn-group">
+                                  <button className="usr-act-btn" title="View details" onClick={() => handleViewUser(u.id)}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                  </button>
+                                  <button className="usr-act-btn" title="Edit details" onClick={() => handleEditUser(u.id)}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                  </button>
+                                  <button className="usr-act-btn" title="Delete account" onClick={() => handleDeleteUser(u.id)}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+
+                  {/* Table pagination */}
+                  <div className="usr-tcard-ft">
+                    <div className="usr-tcard-ft-lbl">Showing 1 to {filteredUsers.length} of {users.length} users</div>
+                    <div className="usr-pg">
+                      <button className="usr-pgb" disabled>&lt;</button>
+                      <button className="usr-pgb cur">1</button>
+                      <button className="usr-pgb">&gt;</button>
+                      <select className="usr-pg-select" defaultValue="50 / page">
+                        <option>10 / page</option>
+                        <option>20 / page</option>
+                        <option>50 / page</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div id="roles-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Roles Table card */}
+                <div className="usr-tcard" style={{ marginBottom: '40px' }}>
+                  <table className="usr-dt">
+                    <thead>
+                      <tr>
+                        <th>Role Name</th>
+                        <th style={{ width: '45%' }}>Description</th>
+                        <th>Users Assigned</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {roles.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94A3B8' }}>
+                            No roles defined.
+                          </td>
+                        </tr>
+                      ) : (
+                        roles.map(r => {
+                          let lastUpdatedText = 'N/A';
+                          if (r.last_updated) {
+                            lastUpdatedText = new Date(r.last_updated).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            });
+                          }
 
-            {/* Roles section header */}
-            <div id="roles-section" className="usr-roles-hdr" style={{ scrollMarginTop: '100px' }}>
-              <h2 className="usr-roles-tit">Roles</h2>
-              <button className="usr-btn-primary" onClick={() => alert('Create Custom Role functionality...')}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                <span>Add Role</span>
-              </button>
-            </div>
+                          return (
+                            <tr key={r.id}>
+                              <td style={{ fontWeight: '700', color: '#0F172A' }}>
+                                <div>{r.name}</div>
+                                <div style={{ fontSize: '10.5px', color: '#94A3B8', fontWeight: '500', marginTop: '2px' }}>CODE: {r.code}</div>
+                              </td>
+                              <td style={{ color: '#475569', fontWeight: '500' }}>{r.description || 'No description provided.'}</td>
+                              <td style={{ fontWeight: '700', color: '#2a195c' }}>{r.users_count}</td>
+                              <td style={{ fontWeight: '500', color: '#334155' }}>{lastUpdatedText}</td>
+                              <td>
+                                <div className="usr-act-btn-group">
+                                  <button className="usr-act-btn" title="View details" onClick={() => router.push(`/users/detail?id=USR-002&tab=Permissions`)}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                  </button>
+                                  <button className="usr-act-btn" title="Edit permissions" onClick={() => alert(`Editing permissions for: ${r.name}`)}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                  </button>
+                                  <button className="usr-act-btn" title="Delete role" onClick={() => handleDeleteRole(r.id, r.name)}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
 
-            {/* Roles Table card */}
-            <div className="usr-tcard" style={{ marginBottom: '40px' }}>
-              <table className="usr-dt">
-                <thead>
-                  <tr>
-                    <th>Role Name</th>
-                    <th style={{ width: '45%' }}>Description</th>
-                    <th>Users</th>
-                    <th>Last Updated</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roles.map(r => (
-                    <tr key={r.name}>
-                      <td style={{ fontWeight: '700', color: '#0F172A' }}>{r.name}</td>
-                      <td style={{ color: '#475569', fontWeight: '500' }}>{r.description}</td>
-                      <td style={{ fontWeight: '700', color: '#2a195c' }}>{r.usersCount}</td>
-                      <td style={{ fontWeight: '500', color: '#334155' }}>{r.lastUpdated}</td>
-                      <td>
-                        <div className="usr-act-btn-group">
-                          <button className="usr-act-btn" title="View details" onClick={() => router.push(`/users/detail?id=USR-002&tab=Permissions`)}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                          </button>
-                          <button className="usr-act-btn" title="Edit details" onClick={() => alert(`Editing permissions for: ${r.name}`)}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          </button>
-                          <button className="usr-act-btn" title="Delete role" onClick={() => { if(confirm(`Delete role ${r.name}?`)) setRoles(prev=>prev.filter(x=>x.name!==r.name)) }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Roles table pagination footer */}
-              <div className="usr-tcard-ft">
-                <div className="usr-tcard-ft-lbl">Showing 1 to {roles.length} of 9 roles</div>
-                <div className="usr-pg">
-                  <button className="usr-pgb" disabled>&lt;</button>
-                  <button className="usr-pgb cur">1</button>
-                  <button className="usr-pgb">2</button>
-                  <span style={{ color: '#94A3B8', fontSize: '11px', margin: '0 4px', fontWeight: 'bold' }}>...</span>
-                  <button className="usr-pgb">&gt;</button>
-                  <select className="usr-pg-select" defaultValue="5 / page">
-                    <option>5 / page</option>
-                    <option>10 / page</option>
-                  </select>
+                  {/* Roles table pagination footer */}
+                  <div className="usr-tcard-ft">
+                    <div className="usr-tcard-ft-lbl">Showing 1 to {roles.length} of {roles.length} roles</div>
+                    <div className="usr-pg">
+                      <button className="usr-pgb" disabled>&lt;</button>
+                      <button className="usr-pgb cur">1</button>
+                      <button className="usr-pgb">&gt;</button>
+                      <select className="usr-pg-select" defaultValue="50 / page">
+                        <option>50 / page</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>

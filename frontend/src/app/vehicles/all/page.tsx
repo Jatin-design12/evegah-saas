@@ -172,7 +172,7 @@ export default function VehicleListPage() {
                 <p className="vl-sub">Monitor stats, manage locks, and view details for all fleet assets.</p>
               </div>
               <div className="vl-hdr-actions">
-                <button className="vl-hdr-btn primary"><IPlus/> Add Vehicle</button>
+                <Link href="/vehicles/add" className="vl-hdr-btn primary" style={{ textDecoration: 'none' }}><IPlus/> Add Vehicle</Link>
               </div>
             </div>
 

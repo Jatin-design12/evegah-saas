@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 
 const CSS = `
-.zn-shell { display: flex; min-height: 100vh; background: #F3F4F9; font-family: 'Inter', sans-serif; }
+.zn-shell { display: flex; min-height: 100vh; background: #F8F9FF; font-family: 'Inter', sans-serif; }
 .zn-main { margin-left: 230px; display: flex; flex-direction: column; min-height: 100vh; width: calc(100% - 230px); }
 .zn-page { flex: 1; padding: 20px 22px 70px; display: flex; flex-direction: column; gap: 20px; }
 
@@ -103,6 +103,7 @@ const CSS = `
 .zn-top-actions-row { display: flex; align-items: center; gap: 10px; }
 .zn-btn { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 18px; background: #fff; border: 1.5px solid #DDD6FE; border-radius: 8px; font-size: 13px; font-weight: 600; color: #2a195c; cursor: pointer; transition: all .15s; text-decoration: none; }
 .zn-btn:hover { background: #F5F3FF; }
+.zn-btn-row { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 1.5px solid #E2E8F0; width: 100%; max-width: 900px; }
 .zn-btn-primary { background: #82C43C; color: #fff; border-color: #82C43C; }
 .zn-btn-primary:hover { background: #6da82e; border-color: #6da82e; color: #fff; }
 .zn-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -110,7 +111,7 @@ const CSS = `
 /* Step 2 Map Layout */
 .zn-map-grid { display: grid; grid-template-columns: 290px 1fr; gap: 20px; }
 .zn-map-sidebar { display: flex; flex-direction: column; gap: 14px; background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.02); }
-.zn-map-wrapper { position: relative; border-radius: 12px; border: 1.5px solid #E2E8F0; overflow: hidden; background: #E5E7EB; min-height: 460px; box-shadow: 0 1px 3px rgba(0,0,0,.02); }
+.zn-map-wrapper { position: relative; border-radius: 12px; border: 1.5px solid #E2E8F0; overflow: hidden; background: #E5E7EB; height: 460px; box-shadow: 0 1px 3px rgba(0,0,0,.02); }
 .leaflet-container { width: 100%; height: 100%; z-index: 1; }
 
 /* Drawing tools card buttons */
@@ -166,6 +167,11 @@ const CSS = `
 
 /* Custom Leaflet Pin styles */
 .custom-center-pin { background: transparent !important; border: none !important; }
+.zn-searchable-dropdown { position: relative; width: 100%; }
+.zn-dropdown-popover { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #DDD6FE; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 4px; }
+.zn-dropdown-item { padding: 8px 12px; font-size: 13px; font-weight: 500; color: #374151; cursor: pointer; transition: all .15s; text-align: left; }
+.zn-dropdown-item:hover { background: #F5F3FF; color: #2a195c; }
+.zn-dropdown-empty { padding: 12px; font-size: 12px; color: #9CA3AF; text-align: center; }
 `;
 
 interface Coordinate {
@@ -173,10 +179,367 @@ interface Coordinate {
   lng: number;
 }
 
+const LOCATION_DATA: Record<string, Record<string, string[]>> = {
+  "Andhra Pradesh": {
+    "Visakhapatnam": ["Gajuwaka", "Madhurawada", "MVP Colony"],
+    "Vijayawada": ["Benz Circle", "One Town", "Patamata"],
+    "Guntur": ["Arundelpet", "Lakshmipuram", "Brodipet"]
+  },
+  "Arunachal Pradesh": {
+    "Itanagar": ["Ganga", "Naharlagun", "Senki View"],
+    "Tawang": ["Tawang Town", "War Memorial Area"]
+  },
+  "Assam": {
+    "Guwahati": ["Paltan Bazaar", "Dispur", "Ganeshguri", "Khanapara"],
+    "Dibrugarh": ["Jalan Nagar", "Amolapatty"]
+  },
+  "Bihar": {
+    "Patna": ["Fraser Road", "Kankarbagh", "Patliputra Colony", "Bailey Road"],
+    "Gaya": ["AP Colony", "Bodhgaya Area"]
+  },
+  "Chhattisgarh": {
+    "Raipur": ["Pandri", "Shankar Nagar", "Tatibandh"],
+    "Bilaspur": ["Vyapaar Vihar", "Mungeli Road"]
+  },
+  "Goa": {
+    "Panaji": ["Miramar", "Altinho", "Dona Paula"],
+    "Margao": ["Fatorda", "Aquem"]
+  },
+  "Gujarat": {
+    "Ahmedabad": ["Satellite", "C G Road", "Vastrapur", "Prahlad Nagar"],
+    "Surat": ["Adajan", "Dumas Road", "Varachha"],
+    "Vadodara": ["Alkapuri", "Akota", "Fatehgunj"]
+  },
+  "Haryana": {
+    "Gurugram": ["Sector 29", "DLF Phase 3", "Cyber City", "Golf Course Road"],
+    "Faridabad": ["Sector 15", "Sector 21", "NIT Faridabad"]
+  },
+  "Himachal Pradesh": {
+    "Shimla": ["Mall Road", "Chotta Shimla", "Sanjauli"],
+    "Dharamshala": ["McLeod Ganj", "Kotwali Bazaar"]
+  },
+  "Jharkhand": {
+    "Ranchi": ["Lalpur", "Harmu", "Kanke Road"],
+    "Jamshedpur": ["Bistupur", "Sakchi", "Telco Colony"]
+  },
+  "Karnataka": {
+    "Bengaluru": ["Indiranagar", "Koramangala", "Whitefield", "Jayanagar", "HSR Layout", "Malleshwaram"],
+    "Mysore": ["Gokulam", "Vidyaranyapuram", "Jayalakshmipuram"]
+  },
+  "Kerala": {
+    "Thiruvananthapuram": ["Kazhakoottam", "Vazhuthacaud", "Palayam"],
+    "Kochi": ["Ernakulam", "Fort Kochi", "Kakkanad", "Edappally"]
+  },
+  "Madhya Pradesh": {
+    "Indore": ["Vijay Nagar", "Palasia", "Rajendra Nagar"],
+    "Bhopal": ["Arera Colony", "MP Nagar", "Kolar Road"]
+  },
+  "Maharashtra": {
+    "Mumbai": ["Andheri", "Bandra", "Colaba", "Borivali", "Dadar", "Juhu", "Powai"],
+    "Pune": ["Kothrud", "Hinjawadi", "Viman Nagar", "Koregaon Park", "Baner"]
+  },
+  "Manipur": {
+    "Imphal": ["Khuman Lampak", "Thangmeiband"]
+  },
+  "Meghalaya": {
+    "Shillong": ["Police Bazar", "Laitumkhrah"]
+  },
+  "Mizoram": {
+    "Aizawl": ["Chanmari", "Zarkawt"]
+  },
+  "Nagaland": {
+    "Kohima": ["BOC Area", "Lerie"],
+    "Dimapur": ["Duncan Basti", "Purana Bazar"]
+  },
+  "Odisha": {
+    "Bhubaneswar": ["Saheed Nagar", "Patia", "Kharavela Nagar"],
+    "Cuttack": ["Link Road", "Buxi Bazaar"]
+  },
+  "Punjab": {
+    "Ludhiana": ["Sarabha Nagar", "Model Town"],
+    "Amritsar": ["Ranjit Avenue", "Golden Temple Area"]
+  },
+  "Rajasthan": {
+    "Jaipur": ["C Scheme", "Malviya Nagar", "Vaishali Nagar", "Raja Park"],
+    "Jodhpur": ["Sardarpura", "Shastri Nagar"]
+  },
+  "Sikkim": {
+    "Gangtok": ["MG Marg", "Deorali", "Tadong"]
+  },
+  "Tamil Nadu": {
+    "Chennai": ["Adyar", "T. Nagar", "Velachery", "Mylapore", "Anna Nagar"],
+    "Coimbatore": ["RS Puram", "Gandhipuram", "Peelamedu"]
+  },
+  "Telangana": {
+    "Hyderabad": ["Gachibowli", "Jubilee Hills", "Madhapur", "Banjara Hills", "Kondapur", "Secunderabad"]
+  },
+  "Tripura": {
+    "Agartala": ["Banamalipur", "Melarmath"]
+  },
+  "Uttar Pradesh": {
+    "Lucknow": ["Hazratganj", "Gomti Nagar", "Aliganj", "Indira Nagar"],
+    "Noida": ["Sector 62", "Sector 18", "Sector 15"],
+    "Kanpur": ["Swaroop Nagar", "Civil Lines"]
+  },
+  "Uttarakhand": {
+    "Dehradun": ["Rajpur Road", "Dehrakhas", "Dalanwala"],
+    "Haridwar": ["Ranipur", "Har Ki Pauri Area"]
+  },
+  "West Bengal": {
+    "Kolkata": ["Salt Lake", "New Town", "Park Street", "Gariahat", "Ballygunge"],
+    "Howrah": ["Shibpur", "Liluah"]
+  },
+  "Delhi": {
+    "New Delhi": ["Connaught Place", "Karol Bagh", "Lajpat Nagar", "Saket", "Vasant Kunj", "Dwarka", "Rohini"]
+  },
+  "Jammu & Kashmir": {
+    "Srinagar": ["Lal Chowk", "Rajbagh", "Dal Lake Area"],
+    "Jammu": ["Gandhi Nagar", "Trikuta Nagar"]
+  },
+  "Ladakh": {
+    "Leh": ["Leh Market", "Chanspa"]
+  },
+  "Puducherry": {
+    "Pondicherry": ["White Town", "Heritage Town"]
+  }
+};
+
+const LOCALITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "Connaught Place": { lat: 28.6315, lng: 77.2197 },
+  "Karol Bagh": { lat: 28.6442, lng: 77.1895 },
+  "Lajpat Nagar": { lat: 28.5685, lng: 77.2435 },
+  "Saket": { lat: 28.5224, lng: 77.2120 },
+  "Vasant Kunj": { lat: 28.5387, lng: 77.1614 },
+  "Dwarka": { lat: 28.5921, lng: 77.0601 },
+  "Rohini": { lat: 28.7441, lng: 77.1232 },
+  "Andheri": { lat: 19.1136, lng: 72.8697 },
+  "Bandra": { lat: 19.0596, lng: 72.8295 },
+  "Colaba": { lat: 18.9067, lng: 72.8147 },
+  "Borivali": { lat: 19.2288, lng: 72.8541 },
+  "Dadar": { lat: 19.0178, lng: 72.8478 },
+  "Juhu": { lat: 19.1012, lng: 72.8258 },
+  "Powai": { lat: 19.1176, lng: 72.9060 },
+  "Kothrud": { lat: 18.5074, lng: 73.8077 },
+  "Hinjawadi": { lat: 18.5913, lng: 73.7389 },
+  "Viman Nagar": { lat: 18.5679, lng: 73.9143 },
+  "Koregaon Park": { lat: 18.5362, lng: 73.8930 },
+  "Baner": { lat: 18.5590, lng: 73.7797 },
+  "Indiranagar": { lat: 12.9718, lng: 77.6412 },
+  "Koramangala": { lat: 12.9352, lng: 77.6244 },
+  "Whitefield": { lat: 12.9698, lng: 77.7500 },
+  "Jayanagar": { lat: 12.9308, lng: 77.5838 },
+  "HSR Layout": { lat: 12.9141, lng: 77.6413 },
+  "Malleshwaram": { lat: 12.9984, lng: 77.5714 },
+  "Adyar": { lat: 13.0033, lng: 80.2550 },
+  "T. Nagar": { lat: 13.0418, lng: 80.2341 },
+  "Velachery": { lat: 12.9815, lng: 80.2180 },
+  "Mylapore": { lat: 13.0333, lng: 80.2685 },
+  "Anna Nagar": { lat: 13.0850, lng: 80.2101 },
+  "Gachibowli": { lat: 17.4401, lng: 78.3489 },
+  "Jubilee Hills": { lat: 17.4325, lng: 78.4070 },
+  "Madhapur": { lat: 17.4483, lng: 78.3915 },
+  "Banjara Hills": { lat: 17.4156, lng: 78.4418 },
+  "Kondapur": { lat: 17.4622, lng: 78.3568 },
+  "Secunderabad": { lat: 17.4399, lng: 78.4983 },
+  "Hazratganj": { lat: 26.8486, lng: 80.9474 },
+  "Gomti Nagar": { lat: 26.8524, lng: 80.9995 },
+  "Sector 62": { lat: 28.6273, lng: 77.3725 },
+  "Sector 18": { lat: 28.5708, lng: 77.3261 },
+  "Salt Lake": { lat: 22.5804, lng: 88.4116 },
+  "New Town": { lat: 22.5854, lng: 88.4797 },
+  "Park Street": { lat: 22.5484, lng: 88.3560 },
+  "C Scheme": { lat: 26.9116, lng: 75.8022 },
+  "Malviya Nagar": { lat: 26.8549, lng: 75.8063 },
+  "Satellite": { lat: 23.0305, lng: 72.5178 },
+  "Vastrapur": { lat: 23.0350, lng: 72.5293 },
+  "Sardarpura": { lat: 26.2790, lng: 73.0118 },
+  "Visakhapatnam": { lat: 17.6868, lng: 83.2185 },
+  "Vijayawada": { lat: 16.5062, lng: 80.6480 },
+  "Patna": { lat: 25.5941, lng: 85.1376 },
+  "Guwahati": { lat: 26.1445, lng: 91.7362 },
+  "Kochi": { lat: 9.9312, lng: 76.2673 },
+  "Thiruvananthapuram": { lat: 8.5241, lng: 76.9366 },
+  "Bhopal": { lat: 23.2599, lng: 77.4126 },
+  "Indore": { lat: 22.7196, lng: 75.8577 },
+  "Bhubaneswar": { lat: 20.2961, lng: 85.8245 },
+  "Jaipur": { lat: 26.9124, lng: 75.7873 },
+  "Lucknow": { lat: 26.8467, lng: 80.9462 },
+  "Dehradun": { lat: 30.3165, lng: 78.0322 },
+  "Srinagar": { lat: 34.0837, lng: 74.7973 }
+};
+
+const getLocalityCoords = (loc: string, city: string) => {
+  if (LOCALITY_COORDINATES[loc]) return LOCALITY_COORDINATES[loc];
+  if (LOCALITY_COORDINATES[city]) return LOCALITY_COORDINATES[city];
+  return { lat: 28.6315, lng: 77.2197 };
+};
+
 export default function AddZonePage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+
+  // Searchable dropdown state
+  const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
+  const [stateSearchText, setStateSearchText] = useState('');
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [citySearchText, setCitySearchText] = useState('');
+  const [localityDropdownOpen, setLocalityDropdownOpen] = useState(false);
+  const [localitySearchText, setLocalitySearchText] = useState('');
+
+  const stateRef = useRef<HTMLDivElement>(null);
+  const cityRef = useRef<HTMLDivElement>(null);
+  const localityRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (stateRef.current && !stateRef.current.contains(e.target as Node)) {
+        setStateDropdownOpen(false);
+      }
+      if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
+        setCityDropdownOpen(false);
+      }
+      if (localityRef.current && !localityRef.current.contains(e.target as Node)) {
+        setLocalityDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (id) {
+        setIsEditing(true);
+        setEditId(id);
+        api.get('/zones')
+          .then(res => {
+            if (res && res.data) {
+              const zone = res.data.find((z: any) => String(z.id) === String(id));
+              if (zone) {
+                const pts = Array.isArray(zone.points) ? zone.points : JSON.parse(zone.points || '[]');
+                setFormData({
+                  name: zone.name,
+                  code: zone.code,
+                  country: zone.country || 'India',
+                  state: zone.state || '',
+                  city: zone.city || '',
+                  locality: zone.locality || '',
+                  type: zone.type || 'Operational Zone',
+                  priority: zone.priority || 'High',
+                  status: zone.status || 'active',
+                  timezone: zone.timezone || '(GMT+05:30) Asia/Kolkata',
+                  max_vehicles: zone.max_vehicles || 250,
+                  description: zone.description || '',
+                  start_date: zone.start_date ? zone.start_date.split('T')[0] : '',
+                  end_date: zone.end_date ? zone.end_date.split('T')[0] : '',
+                  notes: zone.notes || '',
+                  map_link: zone.map_link || ''
+                });
+                setPoints(pts);
+              }
+            }
+          })
+          .catch(err => {
+            console.error('Error fetching zone for edit:', err);
+          });
+      }
+    }
+  }, []);
+
+  const handleStateSelect = (selectedState: string) => {
+    const cities = Object.keys(LOCATION_DATA[selectedState] || {});
+    const firstCity = cities[0] || '';
+    const localities = LOCATION_DATA[selectedState]?.[firstCity] || [];
+    const firstLocality = localities[0] || '';
+    
+    setFormData(prev => ({
+      ...prev,
+      state: selectedState,
+      city: firstCity,
+      locality: firstLocality,
+      name: `${firstLocality} Zone`,
+      code: `${firstLocality.toUpperCase().substring(0, 3)}Z-001`,
+      map_link: `https://maps.google.com/?q=${getLocalityCoords(firstLocality, firstCity).lat},${getLocalityCoords(firstLocality, firstCity).lng}`
+    }));
+    
+    const defaultCoords = getLocalityCoords(firstLocality, firstCity);
+    setPoints([
+      { lat: defaultCoords.lat, lng: defaultCoords.lng },
+      { lat: defaultCoords.lat + 0.001, lng: defaultCoords.lng + 0.009 },
+      { lat: defaultCoords.lat - 0.005, lng: defaultCoords.lng + 0.011 },
+      { lat: defaultCoords.lat - 0.011, lng: defaultCoords.lng - 0.001 },
+      { lat: defaultCoords.lat - 0.013, lng: defaultCoords.lng - 0.010 },
+      { lat: defaultCoords.lat - 0.008, lng: defaultCoords.lng - 0.014 },
+      { lat: defaultCoords.lat - 0.002, lng: defaultCoords.lng - 0.011 },
+      { lat: defaultCoords.lat, lng: defaultCoords.lng }
+    ]);
+    
+    setStateSearchText('');
+    setStateDropdownOpen(false);
+  };
+
+  const handleCitySelect = (selectedCity: string) => {
+    const localities = LOCATION_DATA[formData.state]?.[selectedCity] || [];
+    const firstLocality = localities[0] || '';
+    
+    setFormData(prev => ({
+      ...prev,
+      city: selectedCity,
+      locality: firstLocality,
+      name: `${firstLocality} Zone`,
+      code: `${firstLocality.toUpperCase().substring(0, 3)}Z-001`,
+      map_link: `https://maps.google.com/?q=${getLocalityCoords(firstLocality, selectedCity).lat},${getLocalityCoords(firstLocality, selectedCity).lng}`
+    }));
+    
+    const defaultCoords = getLocalityCoords(firstLocality, selectedCity);
+    setPoints([
+      { lat: defaultCoords.lat, lng: defaultCoords.lng },
+      { lat: defaultCoords.lat + 0.001, lng: defaultCoords.lng + 0.009 },
+      { lat: defaultCoords.lat - 0.005, lng: defaultCoords.lng + 0.011 },
+      { lat: defaultCoords.lat - 0.011, lng: defaultCoords.lng - 0.001 },
+      { lat: defaultCoords.lat - 0.013, lng: defaultCoords.lng - 0.010 },
+      { lat: defaultCoords.lat - 0.008, lng: defaultCoords.lng - 0.014 },
+      { lat: defaultCoords.lat - 0.002, lng: defaultCoords.lng - 0.011 },
+      { lat: defaultCoords.lat, lng: defaultCoords.lng }
+    ]);
+    
+    setCitySearchText('');
+    setCityDropdownOpen(false);
+  };
+
+  const handleLocalitySelect = (selectedLocality: string) => {
+    setFormData(prev => ({
+      ...prev,
+      locality: selectedLocality,
+      name: `${selectedLocality} Zone`,
+      code: `${selectedLocality.toUpperCase().substring(0, 3)}Z-001`,
+      map_link: `https://maps.google.com/?q=${getLocalityCoords(selectedLocality, formData.city).lat},${getLocalityCoords(selectedLocality, formData.city).lng}`
+    }));
+    
+    const defaultCoords = getLocalityCoords(selectedLocality, formData.city);
+    setPoints([
+      { lat: defaultCoords.lat, lng: defaultCoords.lng },
+      { lat: defaultCoords.lat + 0.001, lng: defaultCoords.lng + 0.009 },
+      { lat: defaultCoords.lat - 0.005, lng: defaultCoords.lng + 0.011 },
+      { lat: defaultCoords.lat - 0.011, lng: defaultCoords.lng - 0.001 },
+      { lat: defaultCoords.lat - 0.013, lng: defaultCoords.lng - 0.010 },
+      { lat: defaultCoords.lat - 0.008, lng: defaultCoords.lng - 0.014 },
+      { lat: defaultCoords.lat - 0.002, lng: defaultCoords.lng - 0.011 },
+      { lat: defaultCoords.lat, lng: defaultCoords.lng }
+    ]);
+    
+    setLocalitySearchText('');
+    setLocalityDropdownOpen(false);
+  };
 
   // Form Fields State
   const [formData, setFormData] = useState({
@@ -199,6 +562,18 @@ export default function AddZonePage() {
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const filteredStates = Object.keys(LOCATION_DATA).filter(st =>
+    st.toLowerCase().includes(stateSearchText.toLowerCase())
+  );
+
+  const filteredCities = Object.keys(LOCATION_DATA[formData.state] || {}).filter(ct =>
+    ct.toLowerCase().includes(citySearchText.toLowerCase())
+  );
+
+  const filteredLocalities = (LOCATION_DATA[formData.state]?.[formData.city] || []).filter(loc =>
+    loc.toLowerCase().includes(localitySearchText.toLowerCase())
+  );
 
   // Geofence Drawing State (seeded default Connaught Place points for convenience)
   const [points, setPoints] = useState<Coordinate[]>([
@@ -275,13 +650,15 @@ export default function AddZonePage() {
     const container = document.getElementById(mapId);
     if (!container) return;
 
+    const centerCoords = LOCALITY_COORDINATES[formData.locality] || { lat: 28.6315, lng: 77.2197 };
+
     // Create Leaflet Map instance
     const map = L.map(mapId, {
-      center: [28.625, 77.218], // Connaught Place area
+      center: [centerCoords.lat, centerCoords.lng],
       zoom: 14,
       zoomControl: false,
-      dragging: step === 2,
-      scrollWheelZoom: step === 2
+      dragging: true,
+      scrollWheelZoom: true
     });
     mapRef.current = map;
 
@@ -317,11 +694,11 @@ export default function AddZonePage() {
       });
     } else {
       // Step 3 Review Static Map Preview
-      const latlngs = points.map(pt => [pt.lat, pt.lng]);
-      L.polygon(latlngs, { color: '#2a195c', fillColor: '#6D28D9', fillOpacity: 0.15, weight: 2.5 }).addTo(map);
-      
-      // Add a center pin marker
       if (points.length > 0) {
+        const latlngs = points.map(pt => [pt.lat, pt.lng]);
+        const poly = L.polygon(latlngs, { color: '#2a195c', fillColor: '#6D28D9', fillOpacity: 0.15, weight: 2.5 }).addTo(map);
+        
+        // Add a center pin marker
         const center = getPointsCenter(points);
         L.marker([center.lat, center.lng], {
           icon: L.divIcon({
@@ -341,9 +718,15 @@ export default function AddZonePage() {
             iconAnchor: [30, 32]
           })
         }).addTo(map);
-        map.panTo([center.lat, center.lng]);
+
+        map.fitBounds(poly.getBounds(), { padding: [20, 20] });
       }
     }
+
+    // Call size invalidation to solve Next/React flex dimension loading bugs
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
 
     return () => {
       if (mapRef.current) {
@@ -365,7 +748,7 @@ export default function AddZonePage() {
 
   const generateCirclePoints = (centerLat: number, centerLng: number, radiusMeters: number) => {
     const pointsList = [];
-    const numberOfPoints = 32;
+    const numberOfPoints = 4; // 4-dot circle as requested
     const earthRadius = 6378137; // in meters
     
     for (let i = 0; i < numberOfPoints; i++) {
@@ -381,6 +764,26 @@ export default function AddZonePage() {
     // close path
     pointsList.push(pointsList[0]);
     return pointsList;
+  };
+
+  const handleMapSearch = async () => {
+    if (!mapSearchQuery.trim()) return;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearchQuery)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const newLat = parseFloat(lat);
+        const newLng = parseFloat(lon);
+        if (mapRef.current) {
+          mapRef.current.setView([newLat, newLng], 14);
+        }
+      } else {
+        alert("Location not found.");
+      }
+    } catch (err) {
+      console.error("Error searching location:", err);
+    }
   };
 
   const syncMapLayers = () => {
@@ -412,6 +815,18 @@ export default function AddZonePage() {
           iconAnchor: [5, 5]
         })
       }).addTo(map);
+
+      marker.on('click', () => {
+        const tool = activeToolRef.current;
+        if (tool === 'polygon' && idx === 0 && pts.length >= 3) {
+          if (pts[pts.length - 1].lat !== pts[0].lat || pts[pts.length - 1].lng !== pts[0].lng) {
+            const updated = [...pts, { lat: pts[0].lat, lng: pts[0].lng }];
+            setPoints(updated);
+            pointsRef.current = updated;
+            setTimeout(syncMapLayers, 0);
+          }
+        }
+      });
 
       marker.on('drag', (e: any) => {
         const newLatLng = e.target.getLatLng();
@@ -587,9 +1002,15 @@ export default function AddZonePage() {
         points: points
       };
 
-      const response = await api.post('/zones', payload);
+      let response;
+      if (isEditing && editId) {
+        response = await api.put(`/zones/${editId}`, payload);
+      } else {
+        response = await api.post('/zones', payload);
+      }
+
       if (response.status === 'success') {
-        alert('Zone created successfully!');
+        alert(isEditing ? 'Zone updated successfully!' : 'Zone created successfully!');
         router.push('/zones');
       } else {
         alert('Error: ' + response.message);
@@ -655,31 +1076,7 @@ export default function AddZonePage() {
 
               {/* Wizard Top Action Buttons */}
               <div className="zn-top-actions-row">
-                <Link href="/zones" className="zn-btn">Cancel</Link>
-                {step === 1 && (
-                  <button className="zn-btn zn-btn-primary" onClick={nextStep}>
-                    Next: Draw Geo Fence
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 2 }}>
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </button>
-                )}
-                {step === 2 && (
-                  <button className="zn-btn zn-btn-primary" onClick={nextStep} disabled={points.length < 3}>
-                    Next: Review & Confirm
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 2 }}>
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </button>
-                )}
-                {step === 3 && (
-                  <button className="zn-btn zn-btn-primary" onClick={handleSubmit}>
-                    Save Zone
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 2 }}>
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </button>
-                )}
+                <Link href="/zones" className="zn-btn" style={{ borderColor: '#EF4444', color: '#EF4444' }}>Cancel</Link>
               </div>
             </div>
 
@@ -722,41 +1119,107 @@ export default function AddZonePage() {
                   <div className="zn-form-grid">
                     <div className="zn-form-group">
                       <label className="zn-label">Country <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">🇮🇳</span>
-                        <select className="zn-select" value={formData.country} onChange={(e) => handleInputChange('country', e.target.value)}>
-                          <option value="India">India</option>
-                        </select>
-                      </div>
+                      <select className="zn-select" value={formData.country} onChange={(e) => handleInputChange('country', e.target.value)}>
+                        <option value="India">India</option>
+                      </select>
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">State <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">📍</span>
-                        <select className="zn-select" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)}>
-                          <option value="Delhi">Delhi</option>
-                        </select>
+                      <div className="zn-searchable-dropdown" ref={stateRef}>
+                        <input
+                          type="text"
+                          className="zn-input"
+                          placeholder="Search State..."
+                          value={stateDropdownOpen ? stateSearchText : formData.state}
+                          onFocus={() => {
+                            setStateDropdownOpen(true);
+                            setStateSearchText('');
+                          }}
+                          onChange={(e) => {
+                            setStateDropdownOpen(true);
+                            setStateSearchText(e.target.value);
+                          }}
+                        />
+                        {stateDropdownOpen && (
+                          <div className="zn-dropdown-popover">
+                            {filteredStates.length > 0 ? (
+                              filteredStates.map(st => (
+                                <div key={st} className="zn-dropdown-item" onClick={() => handleStateSelect(st)}>
+                                  {st}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="zn-dropdown-empty">No states found</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">City <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">🏢</span>
-                        <select className="zn-select" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)}>
-                          <option value="New Delhi">New Delhi</option>
-                        </select>
+                      <div className="zn-searchable-dropdown" ref={cityRef}>
+                        <input
+                          type="text"
+                          className="zn-input"
+                          placeholder="Search City..."
+                          value={cityDropdownOpen ? citySearchText : formData.city}
+                          onFocus={() => {
+                            setCityDropdownOpen(true);
+                            setCitySearchText('');
+                          }}
+                          onChange={(e) => {
+                            setCityDropdownOpen(true);
+                            setCitySearchText(e.target.value);
+                          }}
+                        />
+                        {cityDropdownOpen && (
+                          <div className="zn-dropdown-popover">
+                            {filteredCities.length > 0 ? (
+                              filteredCities.map(ct => (
+                                <div key={ct} className="zn-dropdown-item" onClick={() => handleCitySelect(ct)}>
+                                  {ct}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="zn-dropdown-empty">No cities found</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">Area / Locality <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">🗺️</span>
-                        <select className="zn-select" value={formData.locality} onChange={(e) => handleInputChange('locality', e.target.value)}>
-                          <option value="Connaught Place">Connaught Place</option>
-                        </select>
+                      <div className="zn-searchable-dropdown" ref={localityRef}>
+                        <input
+                          type="text"
+                          className="zn-input"
+                          placeholder="Search Area / Locality..."
+                          value={localityDropdownOpen ? localitySearchText : formData.locality}
+                          onFocus={() => {
+                            setLocalityDropdownOpen(true);
+                            setLocalitySearchText('');
+                          }}
+                          onChange={(e) => {
+                            setLocalityDropdownOpen(true);
+                            setLocalitySearchText(e.target.value);
+                          }}
+                        />
+                        {localityDropdownOpen && (
+                          <div className="zn-dropdown-popover">
+                            {filteredLocalities.length > 0 ? (
+                              filteredLocalities.map(loc => (
+                                <div key={loc} className="zn-dropdown-item" onClick={() => handleLocalitySelect(loc)}>
+                                  {loc}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="zn-dropdown-empty">No localities found</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {formErrors.locality && <span className="zn-error">{formErrors.locality}</span>}
                     </div>
@@ -798,48 +1261,36 @@ export default function AddZonePage() {
 
                     <div className="zn-form-group">
                       <label className="zn-label">Zone Type <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">⚙️</span>
-                        <select className="zn-select" value={formData.type} onChange={(e) => handleInputChange('type', e.target.value)}>
-                          <option value="Operational Zone">Operational Zone</option>
-                          <option value="Hub Zone">Hub Zone</option>
-                          <option value="No-Ride Zone">No-Ride Zone</option>
-                          <option value="Charging Zone">Charging Zone</option>
-                        </select>
-                      </div>
+                      <select className="zn-select" value={formData.type} onChange={(e) => handleInputChange('type', e.target.value)}>
+                        <option value="Operational Zone">Operational Zone</option>
+                        <option value="Hub Zone">Hub Zone</option>
+                        <option value="No-Ride Zone">No-Ride Zone</option>
+                        <option value="Charging Zone">Charging Zone</option>
+                      </select>
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">Zone Priority <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">⚠️</span>
-                        <select className="zn-select" value={formData.priority} onChange={(e) => handleInputChange('priority', e.target.value)}>
-                          <option value="High">High</option>
-                          <option value="Medium">Medium</option>
-                          <option value="Low">Low</option>
-                        </select>
-                      </div>
+                      <select className="zn-select" value={formData.priority} onChange={(e) => handleInputChange('priority', e.target.value)}>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">Zone Status <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">🟢</span>
-                        <select className="zn-select" value={formData.status} onChange={(e) => handleInputChange('status', e.target.value)}>
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                        </select>
-                      </div>
+                      <select className="zn-select" value={formData.status} onChange={(e) => handleInputChange('status', e.target.value)}>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">Time Zone <span>*</span></label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">⏰</span>
-                        <select className="zn-select" value={formData.timezone} onChange={(e) => handleInputChange('timezone', e.target.value)}>
-                          <option value="(GMT+05:30) Asia/Kolkata">(GMT+05:30) Asia/Kolkata</option>
-                        </select>
-                      </div>
+                      <select className="zn-select" value={formData.timezone} onChange={(e) => handleInputChange('timezone', e.target.value)}>
+                        <option value="(GMT+05:30) Asia/Kolkata">(GMT+05:30) Asia/Kolkata</option>
+                      </select>
                     </div>
                   </div>
 
@@ -859,41 +1310,32 @@ export default function AddZonePage() {
                   <div className="zn-form-grid">
                     <div className="zn-form-group">
                       <label className="zn-label">Operational Start Date</label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">📅</span>
-                        <input
-                          type="date"
-                          className="zn-input"
-                          value={formData.start_date}
-                          onChange={(e) => handleInputChange('start_date', e.target.value)}
-                        />
-                      </div>
+                      <input
+                        type="date"
+                        className="zn-input"
+                        value={formData.start_date}
+                        onChange={(e) => handleInputChange('start_date', e.target.value)}
+                      />
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">Operational End Date</label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">📅</span>
-                        <input
-                          type="date"
-                          className="zn-input"
-                          value={formData.end_date}
-                          onChange={(e) => handleInputChange('end_date', e.target.value)}
-                        />
-                      </div>
+                      <input
+                        type="date"
+                        className="zn-input"
+                        value={formData.end_date}
+                        onChange={(e) => handleInputChange('end_date', e.target.value)}
+                      />
                     </div>
 
                     <div className="zn-form-group">
                       <label className="zn-label">Max Vehicles Allowed</label>
-                      <div className="zn-input-icon-wrap">
-                        <span className="zn-input-icon">🚗</span>
-                        <input
-                          type="number"
-                          className="zn-input"
-                          value={formData.max_vehicles}
-                          onChange={(e) => handleInputChange('max_vehicles', parseInt(e.target.value) || 0)}
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        className="zn-input"
+                        value={formData.max_vehicles}
+                        onChange={(e) => handleInputChange('max_vehicles', parseInt(e.target.value) || 0)}
+                      />
                     </div>
                   </div>
 
@@ -919,16 +1361,6 @@ export default function AddZonePage() {
                       onChange={(e) => handleInputChange('map_link', e.target.value)}
                     />
                     <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Paste Google Maps link of the exact operational area</span>
-                  </div>
-
-                  <div className="zn-btn-row">
-                    <div />
-                    <button className="zn-btn zn-btn-primary" onClick={nextStep}>
-                      Next: Draw Geo Fence
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
 
@@ -992,7 +1424,9 @@ export default function AddZonePage() {
                     <div className="zn-tools-list">
                       <button className={`zn-tool-btn ${activeTool === 'move' ? 'active' : ''}`} onClick={() => setActiveTool('move')}>
                         <div className="zn-tool-btn-l">
-                          <span>🖐️</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                          </svg>
                           <span>Select / View</span>
                         </div>
                         <span className="zn-tool-radio" />
@@ -1000,7 +1434,9 @@ export default function AddZonePage() {
 
                       <button className={`zn-tool-btn ${activeTool === 'polygon' ? 'active' : ''}`} onClick={() => setActiveTool('polygon')}>
                         <div className="zn-tool-btn-l">
-                          <span>⬡</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                            <polygon points="12 2 22 8.5 22 19.5 12 22 2 19.5 2 8.5" />
+                          </svg>
                           <span>Draw Polygon</span>
                         </div>
                         <span className="zn-tool-radio" />
@@ -1008,15 +1444,19 @@ export default function AddZonePage() {
 
                       <button className={`zn-tool-btn ${activeTool === 'circle' ? 'active' : ''}`} onClick={() => setActiveTool('circle')}>
                         <div className="zn-tool-btn-l">
-                          <span>⚪</span>
-                          <span>Draw Circle</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                            <circle cx="12" cy="12" r="10" />
+                          </svg>
+                          <span>Draw Circle (4 Dots)</span>
                         </div>
                         <span className="zn-tool-radio" />
                       </button>
 
                       <button className={`zn-tool-btn ${activeTool === 'edit' ? 'active' : ''}`} onClick={() => setActiveTool('edit')}>
                         <div className="zn-tool-btn-l">
-                          <span>✏️</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
                           <span>Edit Points</span>
                         </div>
                         <span className="zn-tool-radio" />
@@ -1024,7 +1464,10 @@ export default function AddZonePage() {
                     </div>
 
                     <button className="zn-btn" style={{ borderColor: '#EF4444', color: '#EF4444', marginTop: '10px', justifyContent: 'center' }} onClick={handleClearDrawing}>
-                      <span>🗑️</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
                       <span>Clear Drawing</span>
                     </button>
 
@@ -1040,9 +1483,24 @@ export default function AddZonePage() {
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <div className="zn-map-wrapper">
                       {/* Floating panels on map */}
-                      <div className="zn-map-search">
-                        <span>🔍</span>
-                        <input type="text" className="zn-map-search-input" placeholder="Search location" defaultValue="Connaught Place" />
+                      <div className="zn-map-search" style={{ display: 'flex', alignItems: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" style={{ minWidth: '14px' }}>
+                          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input 
+                          type="text" 
+                          className="zn-map-search-input" 
+                          placeholder="Search location..." 
+                          value={mapSearchQuery} 
+                          onChange={(e) => setMapSearchQuery(e.target.value)} 
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleMapSearch(); }}
+                        />
+                        <button 
+                          onClick={handleMapSearch} 
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#2a195c', padding: '2px 6px' }}
+                        >
+                          Go
+                        </button>
                       </div>
 
                       <div className="zn-map-layers">
@@ -1053,8 +1511,10 @@ export default function AddZonePage() {
                       <div className="zn-map-controls">
                         <button className="zn-map-ctrl-btn" onClick={() => mapRef.current?.zoomIn()}>+</button>
                         <button className="zn-map-ctrl-btn" onClick={() => mapRef.current?.zoomOut()}>-</button>
-                        <button className="zn-map-ctrl-btn" style={{ fontSize: '13px' }}>🖥️</button>
-                        <button className="zn-map-ctrl-btn" style={{ fontSize: '13px' }}>🎯</button>
+                        <button className="zn-map-ctrl-btn" title="Center on Locality" onClick={() => {
+                          const centerCoords = LOCALITY_COORDINATES[formData.locality] || { lat: 28.6315, lng: 77.2197 };
+                          mapRef.current?.setView([centerCoords.lat, centerCoords.lng], 14);
+                        }}>🎯</button>
                       </div>
 
                       {!leafletLoaded ? (
@@ -1066,7 +1526,7 @@ export default function AddZonePage() {
                       )}
                     </div>
                     <div className="zn-map-info-text">
-                      Click on the map to add points. Double click on the first point to close the polygon.
+                      Click on the map to add points. Click on the first point (or double click) to close the polygon.
                     </div>
                   </div>
                 </div>
@@ -1123,21 +1583,6 @@ export default function AddZonePage() {
                       )}
                     </div>
                   </div>
-                </div>
-
-                <div className="zn-btn-row">
-                  <button className="zn-btn" onClick={prevStep}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="15 18 9 12 15 6" />
-                    </svg>
-                    Back: Zone Details
-                  </button>
-                  <button className="zn-btn zn-btn-primary" onClick={nextStep} disabled={points.length < 3}>
-                    Next: Review & Confirm
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </button>
                 </div>
               </div>
             )}
@@ -1285,32 +1730,54 @@ export default function AddZonePage() {
               </div>
             )}
 
-            {/* Bottom Navigation buttons for Step 2 and Step 3 */}
-            {step > 1 && (
-              <div className="zn-btn-row">
-                <button className="zn-btn" onClick={prevStep}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                  {step === 2 ? 'Back: Zone Details' : 'Back: Draw Geo Fence'}
-                </button>
-                {step === 2 ? (
+            {/* Bottom Navigation buttons for all steps */}
+            <div className="zn-btn-row">
+              {step === 1 && (
+                <>
+                  <Link href="/zones" className="zn-btn" style={{ borderColor: '#EF4444', color: '#EF4444' }}>
+                    Cancel
+                  </Link>
+                  <button className="zn-btn zn-btn-primary" onClick={nextStep}>
+                    Next: Draw Geo Fence
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </>
+              )}
+              {step === 2 && (
+                <>
+                  <button className="zn-btn" onClick={prevStep}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                    Back: Zone Details
+                  </button>
                   <button className="zn-btn zn-btn-primary" onClick={nextStep} disabled={points.length < 3}>
                     Next: Review & Confirm
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
                   </button>
-                ) : (
+                </>
+              )}
+              {step === 3 && (
+                <>
+                  <button className="zn-btn" onClick={prevStep}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                    Back: Draw Geo Fence
+                  </button>
                   <button className="zn-btn zn-btn-primary" onClick={handleSubmit}>
                     Save Zone
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </button>
-                )}
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
