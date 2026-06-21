@@ -362,19 +362,11 @@ function AdminDashboard() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /></svg>
                 ), pts: '0,22 10,20 20,24 30,16 40,20 50,12 60,18 70,10 80,8' }
               ].map(kpi => (
-                <div className="adm-kpi" key={kpi.label}>
-                  <div className="adm-kpi-top">
-                    <span className="adm-kpi-lbl">{kpi.label}</span>
-                    <span className={`ev-sc-ic ${kpi.class}`}>{kpi.icon}</span>
-                  </div>
-                  <div className="adm-kpi-val"><AnimatedCount value={kpi.val} /></div>
-                  <div className="adm-kpi-bot">
-                    <span className={kpi.up ? 'adm-trend-up' : 'adm-trend-dn'}>
-                      {kpi.up ? '↑' : '↓'} {kpi.change}
-                    </span>
-                    <svg width="55" height="20" viewBox="0 0 80 30" fill="none">
-                      <polyline className="animate-draw" points={kpi.pts} stroke={kpi.up ? '#10B981' : '#EF4444'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <div className="adm-kpi" key={kpi.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className={`ev-sc-ic ${kpi.class}`} style={{ margin: 0, width: '42px', height: '42px', flexShrink: 0 }}>{kpi.icon}</div>
+                  <div className="zs-kpi-info" style={{ flex: 1 }}>
+                    <span className="zs-kpi-lbl" style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>{kpi.label}</span>
+                    <span className="zs-kpi-val" style={{ fontSize: '19px', fontWeight: 800, color: '#0F172A', display: 'block', marginTop: '2px' }}><AnimatedCount value={kpi.val} /></span>
                   </div>
                 </div>
               ))}
@@ -492,7 +484,7 @@ function AdminDashboard() {
                   ].map(h => (
                     <div className="health-item" key={h.lbl}>
                       <div className="health-l">
-                        <span className="health-icon">✓</span>
+                        <span className="health-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                         <span className="health-lbl">{h.lbl}</span>
                       </div>
                       <span className="health-badge">{h.status}</span>
@@ -596,7 +588,9 @@ function AdminDashboard() {
                   ].map((ann, idx) => (
                     <div className="inward-item" key={idx}>
                       <div className="inward-l">
-                        <span className="inward-icon" style={{ background: '#F5F3FF', color: '#8B5CF6' }}>📣</span>
+                        <span className="inward-icon" style={{ background: '#F5F3FF', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        </span>
                         <div className="inward-info">
                           <span className="inward-code" style={{ fontSize: '11px' }}>{ann.label}</span>
                           <span className="inward-name" style={{ fontSize: '9.5px' }}>{ann.desc}</span>
@@ -625,7 +619,9 @@ function AdminDashboard() {
               ].map(u => (
                 <div className="adm-usage-card" key={u.label}>
                   <div className="adm-usage-top">
-                    <span className="adm-usage-ic">📈</span>
+                    <span className="adm-usage-ic" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </span>
                     <span>{u.label}</span>
                   </div>
                   <div className="adm-usage-val">{u.val}</div>
@@ -671,20 +667,17 @@ function ZoneManagerDashboard() {
             {/* KPI cards (5) */}
             <div className="adm-kpi-row">
               {[
-                { label: 'Zone Active Vehicles', val: '412', change: '8.5%', up: true, class: 'ic-blue', icon: '🚲' },
-                { label: 'Available Batteries', val: '184', change: '4.2%', up: true, class: 'ic-teal', icon: '🔋' },
-                { label: 'Active Swap Stations', val: '8 / 8', change: '100% Online', up: true, class: 'ic-green', icon: '⚡' },
-                { label: 'Today\'s Swaps', val: '92 swaps', change: '12% vs yesterday', up: true, class: 'ic-purple', icon: '🔄' },
-                { label: 'Zone Revenue (Today)', val: '₹24,500', change: '18% vs last week', up: true, class: 'ic-green', icon: '₹' }
+                { label: 'Zone Active Vehicles', val: '412', change: '8.5%', up: true, class: 'ic-blue', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
+                { label: 'Available Batteries', val: '184', change: '4.2%', up: true, class: 'ic-teal', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/></svg> },
+                { label: 'Active Swap Stations', val: '8 / 8', change: '100% Online', up: true, class: 'ic-green', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> },
+                { label: "Today's Swaps", val: '92 swaps', change: '12% vs yesterday', up: true, class: 'ic-purple', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> },
+                { label: 'Zone Revenue (Today)', val: '₹24,500', change: '18% vs last week', up: true, class: 'ic-green', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> }
               ].map(k => (
-                <div className="adm-kpi" key={k.label}>
-                  <div className="adm-kpi-top">
-                    <span className="adm-kpi-lbl">{k.label}</span>
-                    <span className={`ev-sc-ic ${k.class}`} style={{ fontSize: '14px' }}>{k.icon}</span>
-                  </div>
-                  <div className="adm-kpi-val">{k.val}</div>
-                  <div className="adm-kpi-bot">
-                    <span className="adm-trend-up">{k.change}</span>
+                <div className="adm-kpi" key={k.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className={`ev-sc-ic ${k.class}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, width: '42px', height: '42px', flexShrink: 0 }}>{k.icon}</div>
+                  <div className="zs-kpi-info" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <span className="zs-kpi-lbl" style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>{k.label}</span>
+                    <span className="zs-kpi-val" style={{ fontSize: '19px', fontWeight: 800, color: '#0F172A', display: 'block', marginTop: '2px' }}>{k.val}</span>
                   </div>
                 </div>
               ))}
@@ -756,9 +749,6 @@ function ZoneManagerDashboard() {
   );
 }
 
-/* ──────────────────────────────────────────────────────── */
-/* ── 4. DEFAULT EMPLOYEE DASHBOARD VIEW ────────────────── */
-/* ──────────────────────────────────────────────────────── */
 const ROWS = [
   { id: "REQ-2024-0518-0012", type: "new_rider", name: "Amit Kumar", mob: "+91 98765 43210", st: "completed", d1: "May 18, 2024", d2: "10:30 AM" },
   { id: "REQ-2024-0518-0011", type: "retain_rider", name: "Neha Gupta", mob: "+91 91254 56789", st: "pending", d1: "May 18, 2024", d2: "09:45 AM" },
@@ -768,11 +758,11 @@ const ROWS = [
 ];
 
 const T_CFG: Record<string, { label: string; ic: string; icon: React.ReactNode }> = {
-  new_rider: { label: "New Rider", ic: "ic-purple", icon: <span>👤</span> },
-  retain_rider: { label: "Retain Rider", ic: "ic-green", icon: <span>✓</span> },
-  return_ride: { label: "Return Ride", ic: "ic-orange", icon: <span>🔄</span> },
-  extend_ride: { label: "Extend Ride", ic: "ic-blue", icon: <span>📅</span> },
-  battery_swap: { label: "Battery Swap", ic: "ic-teal", icon: <span>🔋</span> }
+  new_rider:    { label: "New Rider",    ic: "ic-purple", icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  retain_rider: { label: "Retain Rider", ic: "ic-green",  icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> },
+  return_ride:  { label: "Return Ride",  ic: "ic-orange", icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> },
+  extend_ride:  { label: "Extend Ride",  ic: "ic-blue",   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+  battery_swap: { label: "Battery Swap", ic: "ic-teal",   icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/></svg> }
 };
 
 const S_LBL: Record<string, string> = {
@@ -844,30 +834,16 @@ function EmployeeDashboard() {
             {/* Stat Cards */}
             <div className="ev-stats">
               {[
-                { tit: "Requests Created", per: "This Month", v: 128, chg: 18.4, up: true, pts: "0,28 14,22 28,18 40,20 52,12 64,15 76,8 82,10", clr: "#6366F1", ic: "📝", cls: "ic-purple" },
-                { tit: "Completed Requests", per: "This Month", v: 96, chg: 16.7, up: true, pts: "0,30 14,24 28,18 40,14 52,18 64,10 76,13 82,6", clr: "#22C55E", ic: "✓", cls: "ic-green" },
-                { tit: "Pending Requests", per: "Currently", v: 32, chg: 5.2, up: false, pts: "0,8 14,13 28,10 40,18 52,14 64,22 76,17 82,20", clr: "#F59E0B", ic: "🕒", cls: "ic-orange" },
-                { tit: "Total Riders", per: "Managed", v: 356, chg: 12.3, up: true, pts: "0,22 14,20 28,24 40,16 52,20 64,13 76,17 82,11", clr: "#14B8A6", ic: "👥", cls: "ic-teal" }
+                { tit: "Requests Created", per: "This Month", v: 128, chg: 18.4, up: true, pts: "0,28 14,22 28,18 40,20 52,12 64,15 76,8 82,10", clr: "#6366F1", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, cls: "ic-purple" },
+                { tit: "Completed Requests", per: "This Month", v: 96, chg: 16.7, up: true, pts: "0,30 14,24 28,18 40,14 52,18 64,10 76,13 82,6", clr: "#22C55E", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>, cls: "ic-green" },
+                { tit: "Pending Requests", per: "Currently", v: 32, chg: 5.2, up: false, pts: "0,8 14,13 28,10 40,18 52,14 64,22 76,17 82,20", clr: "#F59E0B", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, cls: "ic-orange" },
+                { tit: "Total Riders", per: "Managed", v: 356, chg: 12.3, up: true, pts: "0,22 14,20 28,24 40,16 52,20 64,13 76,17 82,11", clr: "#14B8A6", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, cls: "ic-teal" }
               ].map(c => (
-                <div className="ev-sc" key={c.tit}>
-                  <div className="ev-sc-top">
-                    <div>
-                      <div className="ev-sc-tit">{c.tit}</div>
-                      <div className="ev-sc-per">{c.per}</div>
-                    </div>
-                    <div className={`ev-sc-ic ${c.cls}`} style={{ fontSize: '14px' }}>{c.ic}</div>
-                  </div>
-                  <div className="ev-sc-val"><AnimatedCount value={c.v} /></div>
-                  <div className="ev-sc-bot">
-                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                      <span className={`ev-sc-chg ${c.up ? "up" : "dn"}`} style={{ fontSize: '11px', fontWeight: 'bold' }}>
-                        {c.up ? '↑' : '↓'} {c.chg}%
-                      </span>
-                      <span className="ev-sc-lbl">from last month</span>
-                    </div>
-                    <svg width="60" height="20" viewBox="0 0 80 30" fill="none">
-                      <polyline className="animate-draw" points={c.pts} stroke={c.clr} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <div className="ev-sc" key={c.tit} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className={`ev-sc-ic ${c.cls}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, width: '42px', height: '42px', flexShrink: 0 }}>{c.icon}</div>
+                  <div className="zs-kpi-info" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <span className="zs-kpi-lbl" style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>{c.tit}</span>
+                    <span className="zs-kpi-val" style={{ fontSize: '19px', fontWeight: 800, color: '#0F172A', display: 'block', marginTop: '2px' }}><AnimatedCount value={c.v} /></span>
                   </div>
                 </div>
               ))}
@@ -881,14 +857,14 @@ function EmployeeDashboard() {
                 
                 <div className="ev-cr-grid">
                   {[
-                    { oc: "orb-purple", icon: "👤", tit: "New Rider", desc: "Onboard a new rider and create a new ride.", lnk: "Create New Rider", lc: "lnk-purple", href: "/new-rider" },
-                    { oc: "orb-green", icon: "✓", tit: "Retain Rider", desc: "Retain existing rider and start a new ride.", lnk: "Retain Rider", lc: "lnk-green", href: "/retain-rider" },
-                    { oc: "orb-orange", icon: "🔄", tit: "Return Ride", desc: "Complete the ride and initiate return.", lnk: "Return Ride", lc: "lnk-orange", href: "/return-ride" },
-                    { oc: "orb-blue", icon: "📅", tit: "Extend Ride", desc: "Extend the current ride duration.", lnk: "Extend Ride", lc: "lnk-blue", href: "/extend-ride" },
-                    { oc: "orb-teal", icon: "🔋", tit: "Battery Swap", desc: "Request battery swap for active ride.", lnk: "Battery Swap", lc: "lnk-teal", href: "/battery-swap" }
+                    { oc: "orb-purple", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, tit: "New Rider", desc: "Onboard a new rider and create a new ride.", lnk: "Create New Rider", lc: "lnk-purple", href: "/new-rider" },
+                    { oc: "orb-green", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>, tit: "Retain Rider", desc: "Retain existing rider and start a new ride.", lnk: "Retain Rider", lc: "lnk-green", href: "/retain-rider" },
+                    { oc: "orb-orange", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>, tit: "Return Ride", desc: "Complete the ride and initiate return.", lnk: "Return Ride", lc: "lnk-orange", href: "/return-ride" },
+                    { oc: "orb-blue", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, tit: "Extend Ride", desc: "Extend the current ride duration.", lnk: "Extend Ride", lc: "lnk-blue", href: "/extend-ride" },
+                    { oc: "orb-teal", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/></svg>, tit: "Battery Swap", desc: "Request battery swap for active ride.", lnk: "Battery Swap", lc: "lnk-teal", href: "/battery-swap" }
                   ].map(c => (
                     <a href={c.href} className="ev-rc" key={c.tit}>
-                      <div className={`ev-rc-orb ${c.oc}`} style={{ fontSize: '16px' }}>{c.icon}</div>
+                      <div className={`ev-rc-orb ${c.oc}`}>{c.icon}</div>
                       <div className="ev-rc-tit">{c.tit}</div>
                       <div className="ev-rc-desc">{c.desc}</div>
                       <span className={`ev-rc-lnk ${c.lc}`}>
@@ -907,9 +883,8 @@ function EmployeeDashboard() {
                   <table className="ev-dt">
                     <thead>
                       <tr>
-                        <th>Request ID</th>
-                        <th>Type</th>
                         <th>Rider Name</th>
+                        <th>Type</th>
                         <th>Mobile Number</th>
                         <th>Status</th>
                         <th>Created On</th>
@@ -921,10 +896,10 @@ function EmployeeDashboard() {
                         const t = T_CFG[r.type];
                         return (
                           <tr key={r.id}>
-                            <td className="ev-rid">{r.id}</td>
+                            <td style={{ fontWeight: 600 }}>{r.name}</td>
                             <td>
                               <div className="ev-type-cell">
-                                <div className={`ev-type-ic ${t.ic}`} style={{ fontSize: '12px' }}>
+                                <div className={`ev-type-ic ${t.ic}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   {t.icon}
                                 </div>
                                 <span style={{ fontSize: '12.5px', fontWeight: 500 }}>
@@ -932,7 +907,6 @@ function EmployeeDashboard() {
                                 </span>
                               </div>
                             </td>
-                            <td style={{ fontWeight: 500 }}>{r.name}</td>
                             <td style={{ color: "#6B7280" }}>{r.mob}</td>
                             <td>
                               <span className={`ev-sbadge s-${r.st}`}>
@@ -944,7 +918,9 @@ function EmployeeDashboard() {
                               <div style={{ fontSize: '11px', color: "#9CA3AF" }}>{r.d2}</div>
                             </td>
                             <td>
-                              <button className="ev-eye-btn">👁</button>
+                              <a href={`/new-rider?id=${r.id}`} className="ev-eye-btn" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                              </a>
                             </td>
                           </tr>
                         );
@@ -962,14 +938,14 @@ function EmployeeDashboard() {
                     <div className="ev-pc-dt">May 18, 2024</div>
                   </div>
                   {[
-                    { ic: "📝", cls: "ic-purple", lbl: "Requests Created", v: 12 },
-                    { ic: "✓", cls: "ic-green", lbl: "Requests Completed", v: 8 },
-                    { ic: "🕒", cls: "ic-orange", lbl: "Pending Requests", v: 4 },
-                    { ic: "🔋", cls: "ic-teal", lbl: "Battery Swap Requests", v: 6 }
+                    { icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>, cls: "ic-purple", lbl: "Requests Created", v: 12 },
+                    { icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>, cls: "ic-green", lbl: "Requests Completed", v: 8 },
+                    { icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, cls: "ic-orange", lbl: "Pending Requests", v: 4 },
+                    { icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="13" x2="23" y2="11"/></svg>, cls: "ic-teal", lbl: "Battery Swap Requests", v: 6 }
                   ].map(s => (
                     <div className="ev-sum-row" key={s.lbl}>
                       <div className="ev-sum-l">
-                        <div className={`ev-sum-ic ${s.cls}`} style={{ fontSize: '10px' }}>{s.ic}</div>
+                        <div className={`ev-sum-ic ${s.cls}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
                         <span className="ev-sum-lbl">{s.lbl}</span>
                       </div>
                       <span className="ev-sum-val">{s.v}</span>
