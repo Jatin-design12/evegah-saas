@@ -152,7 +152,7 @@ export default function TopBar({
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <header className="ev-tb">
         {/* Hamburger */}
-        <div className="ev-tb-hamburger" onClick={() => onToggle?.()}>
+        <div className="ev-tb-hamburger" onClick={() => window.dispatchEvent(new Event("evegah_sidebar_toggle"))}>
           <span />
           <span />
           <span />

@@ -160,6 +160,21 @@ function SettingsContent() {
   }, [tabParam]);
   const [loading, setLoading] = useState(true);
   const [dbSettings, setDbSettings] = useState<any>(null);
+  const [sidebarTheme, setSidebarTheme] = useState<'white' | 'dark'>('white');
+
+  // Load sidebar theme from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('evegah_sidebar_theme') as 'white' | 'dark' | null;
+      if (saved) setSidebarTheme(saved);
+    }
+  }, []);
+
+  const handleSidebarTheme = (theme: 'white' | 'dark') => {
+    setSidebarTheme(theme);
+    localStorage.setItem('evegah_sidebar_theme', theme);
+    window.dispatchEvent(new Event('evegah_sidebar_theme_changed'));
+  };
 
   // Standard initial state values representing what's shown in the screenshots
   const [localSettings, setLocalSettings] = useState<any>({
@@ -2556,6 +2571,123 @@ function SettingsContent() {
                 {/* ─── TAB 8: SYSTEM ─── */}
                 {activeTab === 'System' && currentSettings.system && (
                   <div className="se-grid-3">
+                    {/* Sidebar Theme */}
+                    <div className="se-card se-grid-all">
+                      <div className="se-card-hdr">
+                        <div className="se-card-ic">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        </div>
+                        <div className="se-card-text">
+                          <span className="se-card-tit">Sidebar Theme</span>
+                          <span className="se-card-sub">Choose the visual style for the navigation sidebar.</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '16px', alignItems: 'stretch' }}>
+                        {/* White option */}
+                        <button
+                          id="sidebar-theme-white"
+                          onClick={() => handleSidebarTheme('white')}
+                          style={{
+                            flex: 1,
+                            border: sidebarTheme === 'white' ? '2px solid #2a195c' : '2px solid #E2E8F0',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            background: sidebarTheme === 'white' ? '#EEF2FF' : '#FAFAFA',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '12px',
+                          }}
+                        >
+                          {/* Mini white sidebar preview */}
+                          <div style={{
+                            width: '120px', height: '80px', borderRadius: '8px',
+                            background: '#fff', border: '1px solid #E2E8F0',
+                            display: 'flex', overflow: 'hidden',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                          }}>
+                            <div style={{ width: '32px', background: '#fff', borderRight: '1px solid #E2E8F0', padding: '6px 4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {[...Array(5)].map((_, i) => (
+                                <div key={i} style={{ height: '6px', borderRadius: '2px', background: i === 1 ? '#EEF2FF' : '#F1F5F9', width: '100%' }} />
+                              ))}
+                            </div>
+                            <div style={{ flex: 1, background: '#F3F4F9', padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {[...Array(4)].map((_, i) => (
+                                <div key={i} style={{ height: '8px', borderRadius: '2px', background: '#E2E8F0', width: i === 0 ? '80%' : '60%' }} />
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '16px', height: '16px', borderRadius: '50%',
+                              border: '2px solid #2a195c',
+                              background: sidebarTheme === 'white' ? '#2a195c' : '#fff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0,
+                            }}>
+                              {sidebarTheme === 'white' && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff' }} />}
+                            </div>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>White</span>
+                            {sidebarTheme === 'white' && <span style={{ fontSize: '10.5px', background: '#DCFCE7', color: '#15803D', padding: '2px 7px', borderRadius: '6px', fontWeight: 700 }}>Active</span>}
+                          </div>
+                        </button>
+
+                        {/* Dark option */}
+                        <button
+                          id="sidebar-theme-dark"
+                          onClick={() => handleSidebarTheme('dark')}
+                          style={{
+                            flex: 1,
+                            border: sidebarTheme === 'dark' ? '2px solid #16a34a' : '2px solid #E2E8F0',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            background: sidebarTheme === 'dark' ? '#F0FDF4' : '#FAFAFA',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '12px',
+                          }}
+                        >
+                          {/* Mini dark sidebar preview */}
+                          <div style={{
+                            width: '120px', height: '80px', borderRadius: '8px',
+                            background: '#fff', border: '1px solid #E2E8F0',
+                            display: 'flex', overflow: 'hidden',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                          }}>
+                            <div style={{ width: '32px', background: 'linear-gradient(180deg,#13102b,#1a1145)', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '6px 4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {[...Array(5)].map((_, i) => (
+                                <div key={i} style={{ height: '6px', borderRadius: '2px', background: i === 2 ? 'rgba(22,163,74,0.3)' : 'rgba(255,255,255,0.08)', width: '100%' }} />
+                              ))}
+                            </div>
+                            <div style={{ flex: 1, background: '#F3F4F9', padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {[...Array(4)].map((_, i) => (
+                                <div key={i} style={{ height: '8px', borderRadius: '2px', background: '#E2E8F0', width: i === 0 ? '80%' : '60%' }} />
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                              width: '16px', height: '16px', borderRadius: '50%',
+                              border: '2px solid #16a34a',
+                              background: sidebarTheme === 'dark' ? '#16a34a' : '#fff',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0,
+                            }}>
+                              {sidebarTheme === 'dark' && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff' }} />}
+                            </div>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>Dark</span>
+                            {sidebarTheme === 'dark' && <span style={{ fontSize: '10.5px', background: '#DCFCE7', color: '#15803D', padding: '2px 7px', borderRadius: '6px', fontWeight: 700 }}>Active</span>}
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* System Preferences */}
                     <div className="se-card">
                       <div className="se-card-hdr">

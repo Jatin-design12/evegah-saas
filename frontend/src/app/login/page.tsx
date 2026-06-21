@@ -3,513 +3,664 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-.log-shell {
-  display: flex;
-  align-items: center;
-  min-height: 100vh;
-  background: #F8F9FF;
-  font-family: 'Inter', sans-serif;
-  overflow: hidden;
-  position: relative;
-  padding: 24px 20px;
-  box-sizing: border-box;
+/* ===== Root Variables ===== */
+:root {
+  --login-primary: #16a34a;
+  --login-primary-light: #22c55e;
+  --login-accent: #2a195c;
+  --login-accent-light: #4f46e5;
+  --login-surface: #ffffff;
+  --login-text: #0f172a;
+  --login-text-secondary: #64748b;
+  --login-border: #e2e8f0;
+  --login-bg: #f8fafc;
 }
 
-/* Background Wavy Lines */
-.log-bg-wave {
+/* ===== Shell ===== */
+.login-shell {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+}
+
+/* ===== Left Panel — Dark branded column ===== */
+.login-left {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 48px;
+  background: linear-gradient(160deg, #0c0a1a 0%, #1a1145 40%, #0f2518 100%);
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+/* Animated gradient mesh overlay */
+.login-left::before {
+  content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 50%;
-  height: 250px;
-  background: radial-gradient(circle at 10% 120%, rgba(42, 25, 92, 0.06) 0%, rgba(22, 163, 74, 0.04) 50%, transparent 100%);
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 600px at 20% 20%, rgba(22,163,74,0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 500px at 80% 80%, rgba(79,70,229,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 400px at 60% 30%, rgba(42,25,92,0.18) 0%, transparent 60%);
+  animation: meshShift 12s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+@keyframes meshShift {
+  0% { opacity: 0.8; transform: scale(1) rotate(0deg); }
+  100% { opacity: 1; transform: scale(1.05) rotate(1deg); }
+}
+
+/* Grid lines overlay */
+.login-left::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  z-index: 1;
+}
+
+.login-left-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Logo area */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 60px;
+}
+
+.login-brand img {
+  height: 36px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+/* Hero text */
+.login-hero-text {
+  max-width: 480px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-hero-h1 {
+  font-size: 44px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.12;
+  margin: 0 0 16px;
+  letter-spacing: -1.5px;
+}
+
+.login-hero-h1 .green {
+  background: linear-gradient(135deg, #16a34a, #4ade80);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-hero-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.7;
+  max-width: 400px;
+  font-weight: 400;
+}
+
+/* Feature pills */
+.login-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 32px;
+}
+
+.login-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s;
+}
+
+.login-pill:hover {
+  background: rgba(22,163,74,0.12);
+  border-color: rgba(22,163,74,0.25);
+  color: #4ade80;
+}
+
+.login-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 6px rgba(22,163,74,0.5);
+}
+
+/* Glass stat cards */
+.login-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 48px;
+}
+
+.login-stat-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+
+.login-stat-card:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.12);
+  transform: translateY(-2px);
+}
+
+.login-stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.login-stat-icon.green {
+  background: rgba(22,163,74,0.15);
+  color: #4ade80;
+}
+
+.login-stat-icon.blue {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+}
+
+.login-stat-icon.purple {
+  background: rgba(139,92,246,0.15);
+  color: #a78bfa;
+}
+
+.login-stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.login-stat-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Bottom trust bar */
+.login-trust {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: auto;
+}
+
+.login-trust-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 500;
+}
+
+.login-trust-badge svg {
+  color: rgba(22,163,74,0.7);
+}
+
+/* Floating particles */
+.login-particle {
+  position: absolute;
+  border-radius: 50%;
   pointer-events: none;
   z-index: 1;
 }
 
-/* Left Hero Column */
-.log-hero {
-  flex: 1;
-  max-width: 760px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 36px 48px;
-  position: relative;
-  z-index: 2;
+.login-particle-1 {
+  width: 4px;
+  height: 4px;
+  background: rgba(22,163,74,0.4);
+  top: 15%;
+  left: 75%;
+  animation: particleFloat1 8s ease-in-out infinite;
 }
 
-.log-logo-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.login-particle-2 {
+  width: 3px;
+  height: 3px;
+  background: rgba(79,70,229,0.3);
+  top: 60%;
+  left: 85%;
+  animation: particleFloat2 10s ease-in-out infinite;
 }
 
-.log-logo-img {
-  height: 42px;
-  object-fit: contain;
+.login-particle-3 {
+  width: 5px;
+  height: 5px;
+  background: rgba(22,163,74,0.25);
+  top: 80%;
+  left: 25%;
+  animation: particleFloat3 7s ease-in-out infinite;
 }
 
-.log-hero-content {
-  margin-top: -20px;
+.login-particle-4 {
+  width: 3px;
+  height: 3px;
+  background: rgba(139,92,246,0.3);
+  top: 30%;
+  left: 60%;
+  animation: particleFloat2 9s ease-in-out infinite 2s;
 }
 
-.log-hero-h1 {
-  font-size: 38px;
-  font-weight: 800;
-  color: #0F172A;
-  line-height: 1.15;
-  margin: 0 0 16px;
+@keyframes particleFloat1 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
+  50% { transform: translate(-15px, -25px); opacity: 0.8; }
 }
 
-.log-hero-h1 span {
-  color: #16a34a;
+@keyframes particleFloat2 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+  50% { transform: translate(20px, -20px); opacity: 0.7; }
 }
 
-.log-hero-features {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13.5px;
-  color: #64748B;
-  font-weight: 600;
-  margin-bottom: 40px;
+@keyframes particleFloat3 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.25; }
+  50% { transform: translate(-10px, -30px); opacity: 0.6; }
 }
 
-.log-feature-dot {
-  color: #16a34a;
-  font-weight: bold;
-}
-
-/* Animated Scooter Area */
-.log-scooter-area {
-  position: relative;
-  width: 100%;
-  height: 340px;
-  margin-top: 20px;
-}
-
-.log-scooter-container {
-  display: flex;
-  align-items: flex-end;
-  position: absolute;
-  bottom: 10px;
-  left: 0;
-  width: 100%;
-}
-
-.log-scooter-item {
-  position: absolute;
-  transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1);
-  filter: drop-shadow(0 20px 30px rgba(15, 23, 42, 0.08));
-}
-
-/* Asynchronous floating keyframes */
-@keyframes float-sc1 {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(-0.5deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
-}
-
-@keyframes float-sc2 {
-  0% { transform: translateY(0px) scale(1.05); }
-  50% { transform: translateY(-12px) scale(1.05); }
-  100% { transform: translateY(0px) scale(1.05); }
-}
-
-@keyframes float-sc3 {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-7px) rotate(0.5deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
-}
-
-.sc-left {
-  left: 0px;
-  z-index: 12;
-  width: 190px;
-  animation: float-sc1 6s ease-in-out infinite;
-}
-
-.sc-mid {
-  left: 140px;
-  z-index: 10;
-  width: 220px;
-  animation: float-sc2 7s ease-in-out infinite;
-}
-
-.sc-right {
-  left: 270px;
-  z-index: 13;
-  width: 260px;
-  animation: float-sc3 5.5s ease-in-out infinite;
-}
-
-.log-scooter-img {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
-
-/* Floating dynamic badges */
-.log-floating-badge {
-  position: absolute;
-  background: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 25px rgba(42, 25, 92, 0.08);
-  border: 1px solid #F1F5F9;
-  z-index: 15;
-  transition: all 0.3s;
-}
-
-@keyframes bounce-badge {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes pulse-badge {
-  0%, 100% { transform: scale(1); box-shadow: 0 10px 25px rgba(42, 25, 92, 0.08); }
-  50% { transform: scale(1.05); box-shadow: 0 10px 25px rgba(22, 163, 74, 0.15); }
-}
-
-.badge-pin {
-  top: 60px;
-  left: 90px;
-  width: 36px;
-  height: 36px;
-  color: #7C3AED;
-  background: #FAF5FF;
-  animation: bounce-badge 4s ease-in-out infinite;
-}
-
-.badge-battery {
-  top: 15px;
-  left: 210px;
-  width: 42px;
-  height: 42px;
-  color: #16A34A;
-  background: #ECFDF5;
-  animation: pulse-badge 5s ease-in-out infinite;
-}
-
-.badge-chart {
-  top: 80px;
-  left: 370px;
-  width: 38px;
-  height: 38px;
-  color: #2563EB;
-  background: #EFF6FF;
-  animation: bounce-badge 4.5s ease-in-out infinite 0.5s;
-}
-
-.log-bottom-card {
-  align-self: flex-start;
-  background: #fff;
-  border: 1.5px solid #E2E8F0;
-  border-radius: 12px;
-  padding: 12px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
-  margin-top: auto;
-  z-index: 5;
-}
-
-.log-shield-ic {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #EEF2FF;
-  color: #4F46E5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* Right Login Card Column */
-.log-card-col {
-  flex: 0.9;
+/* ===== Right Panel — Login Form ===== */
+.login-right {
+  flex: 0 0 520px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
-  z-index: 3;
+  background: var(--login-bg);
+  position: relative;
 }
 
-.log-card {
-  background: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: 20px;
+/* Subtle top-right gradient blob */
+.login-right::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(22,163,74,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.login-card {
   width: 100%;
-  max-width: 520px;
-  padding: 32px 36px;
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.05);
+  max-width: 420px;
   display: flex;
   flex-direction: column;
-  position: relative;
-  overflow: hidden;
 }
 
-.log-card-logo-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  border: 1px solid #E2E8F0;
+/* Logo icon on card */
+.login-card-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1px solid #d1fae5;
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: center;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.02);
+  margin-bottom: 28px;
+  box-shadow: 0 4px 12px rgba(22,163,74,0.08);
 }
 
-.log-card-logo-wrap img {
-  height: 20px;
+.login-card-logo img {
+  height: 22px;
   object-fit: contain;
 }
 
-.log-card-h2 {
-  font-size: 24px;
+.login-card-h2 {
+  font-size: 26px;
   font-weight: 800;
-  color: #0F172A;
-  text-align: center;
-  margin: 0;
+  color: var(--login-text);
+  margin: 0 0 6px;
+  letter-spacing: -0.5px;
 }
 
-.log-card-subtitle {
+.login-card-sub {
+  font-size: 14px;
+  color: var(--login-text-secondary);
+  margin: 0 0 32px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Form */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.login-label {
   font-size: 13px;
-  color: #64748B;
-  text-align: center;
-  margin-top: 6px;
-  margin-bottom: 28px;
-  font-weight: 500;
-}
-
-/* Form Styles */
-.log-form {
+  font-weight: 600;
+  color: #374151;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: relative;
-  z-index: 5;
+  align-items: center;
+  gap: 4px;
 }
 
-.log-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.log-lbl {
-  font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-}
-
-.log-inp-wrap {
+.login-input-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.log-inp-ic {
+.login-input-icon {
   position: absolute;
-  left: 12px;
-  color: #94A3B8;
+  left: 14px;
+  color: #94a3b8;
   display: flex;
   align-items: center;
+  pointer-events: none;
+  transition: color 0.2s;
 }
 
-.log-inp {
+.login-input {
   width: 100%;
-  padding: 11px 12px 11px 36px;
-  border: 1.5px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 13px;
-  outline: none;
-  background: #fff;
-  color: #334155;
+  padding: 12px 14px 12px 42px;
+  border: 1.5px solid var(--login-border);
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 500;
-  transition: all 0.15s;
+  color: var(--login-text);
+  background: var(--login-surface);
+  outline: none;
+  transition: all 0.2s ease;
 }
 
-.log-inp:focus {
-  border-color: #2a195c;
-  box-shadow: 0 0 0 1px #2a195c;
+.login-input::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
 }
 
-.log-inp-pwd {
-  padding-right: 36px;
+.login-input:focus {
+  border-color: var(--login-primary);
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
 }
 
-.log-eye-btn {
+.login-input:focus ~ .login-input-icon,
+.login-input:focus + .login-input-icon {
+  color: var(--login-primary);
+}
+
+.login-input-pwd {
+  padding-right: 44px;
+}
+
+.login-eye-btn {
   position: absolute;
   right: 12px;
   background: none;
   border: none;
-  color: #94A3B8;
+  color: #94a3b8;
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 2px;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s;
 }
 
-.log-eye-btn:hover {
-  color: #2a195c;
+.login-eye-btn:hover {
+  color: var(--login-primary);
+  background: rgba(22,163,74,0.06);
 }
 
-/* Options */
-.log-opts-row {
+/* Options row */
+.login-opts {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 12.5px;
+  margin-top: -4px;
 }
 
-.log-cb-label {
+.login-check-label {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 13px;
   color: #475569;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  user-select: none;
 }
 
-.log-cb {
+.login-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: #2a195c;
+  accent-color: var(--login-primary);
   cursor: pointer;
+  border-radius: 4px;
 }
 
-.log-link {
-  color: #2a195c;
+.login-forgot {
+  font-size: 13px;
+  color: var(--login-primary);
+  font-weight: 600;
   text-decoration: none;
-  font-weight: 700;
   transition: color 0.15s;
 }
 
-.log-link:hover {
-  color: #4F46E5;
+.login-forgot:hover {
+  color: var(--login-primary-light);
 }
 
-/* Submit Button */
-.log-submit-btn {
+/* Submit button */
+.login-submit {
   width: 100%;
-  padding: 12px;
+  padding: 13px 20px;
   border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #2a195c 0%, #4f46e5 100%);
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--login-primary) 0%, #15803d 100%);
   color: #fff;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.15s;
-  box-shadow: 0 10px 15px -3px rgba(42, 25, 92, 0.2);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(22,163,74,0.25), 0 1px 3px rgba(22,163,74,0.1);
+  position: relative;
+  overflow: hidden;
+  margin-top: 4px;
 }
 
-.log-submit-btn:hover {
-  opacity: 0.95;
+.login-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.login-submit:hover::before {
+  opacity: 1;
+}
+
+.login-submit:hover {
   transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(22,163,74,0.3), 0 2px 6px rgba(22,163,74,0.15);
+}
+
+.login-submit:active {
+  transform: translateY(0);
+}
+
+.login-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Spinner */
+.login-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: loginSpin 0.6s linear infinite;
+}
+
+@keyframes loginSpin {
+  to { transform: rotate(360deg); }
 }
 
 /* Divider */
-.log-divider {
+.login-divider {
   display: flex;
   align-items: center;
-  text-align: center;
-  color: #94A3B8;
-  font-size: 11px;
-  margin: 18px 0;
+  gap: 16px;
+  margin: 4px 0;
+  color: #94a3b8;
+  font-size: 12px;
   font-weight: 500;
 }
 
-.log-divider::before,
-.log-divider::after {
+.login-divider::before,
+.login-divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1.5px solid #F1F5F9;
+  height: 1px;
+  background: var(--login-border);
 }
 
-.log-divider:not(:empty)::before {
-  margin-right: 12px;
-}
-
-.log-divider:not(:empty)::after {
-  margin-left: 12px;
-}
-
-/* Google Sign-in */
-.log-google-btn {
+/* Google button */
+.login-google {
   width: 100%;
-  padding: 11px;
-  border: 1.5px solid #E2E8F0;
-  border-radius: 8px;
-  background: #fff;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 700;
+  padding: 12px 20px;
+  border: 1.5px solid var(--login-border);
+  border-radius: 10px;
+  background: var(--login-surface);
+  color: var(--login-text);
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.15s;
+  gap: 10px;
+  transition: all 0.2s;
 }
 
-.log-google-btn:hover {
-  background: #F8FAFC;
-  border-color: #CBD5E1;
+.login-google:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
-/* Footer info */
-.log-footer-text {
-  font-size: 12px;
-  color: #64748B;
+/* Footer text */
+.login-footer {
+  font-size: 13px;
+  color: var(--login-text-secondary);
   text-align: center;
-  margin-top: 24px;
-  font-weight: 500;
+  margin-top: 28px;
+  font-weight: 400;
 }
 
-/* City graphic at card bottom */
-.log-city-bg {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 54px;
-  opacity: 0.08;
-  pointer-events: none;
-  background-image: url('/assets/city.png');
-  background-repeat: repeat-x;
-  background-size: contain;
-  background-position: bottom;
-  z-index: 1;
+.login-footer a {
+  color: var(--login-primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.login-footer a:hover {
+  color: var(--login-primary-light);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1080px) {
+  .login-right {
+    flex: 0 0 460px;
+  }
+  .login-left {
+    padding: 32px 36px;
+  }
+  .login-hero-h1 {
+    font-size: 36px;
+  }
+  .login-stats {
+    gap: 8px;
+  }
 }
 
 @media (max-width: 900px) {
-  .log-hero { display: none; }
-  .log-shell { justify-content: center; padding: 16px; }
-  .log-card-col { flex: 1; width: 100%; max-width: 480px; }
-  .log-card { padding: 20px; border-radius: 16px; }
-}
-
-@media (max-width: 1200px) {
-  /* On medium screens keep the hero but limit its width so the card stays centered */
-  .log-hero { max-width: 480px; padding: 28px 24px; }
-  .log-card { max-width: 520px; padding: 28px; }
-  .log-shell { gap: 18px; }
+  .login-left {
+    display: none;
+  }
+  .login-shell {
+    justify-content: center;
+    background: var(--login-bg);
+  }
+  .login-right {
+    flex: 1;
+    max-width: 100%;
+    padding: 24px 20px;
+  }
+  .login-card {
+    max-width: 420px;
+  }
 }
 `;
 
@@ -643,149 +794,179 @@ export default function LoginPage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <div className="log-shell">
-        <div className="log-bg-wave" />
-        
-        {/* Left column hero with animated scooters and floating badges */}
-        <div className="log-hero">
-          <div className="log-logo-row">
-            <img src="/logo.png" className="log-logo-img" alt="evegah brand" />
-          </div>
-          
-          <div className="log-hero-content">
-            <h1 className="log-hero-h1">
-              Powering Smart<br />
-              <span>Electric Mobility</span>
-            </h1>
-            
-            <div className="log-hero-features">
-              <span>Fleet</span>
-              <span className="log-feature-dot">•</span>
-              <span>Rentals</span>
-              <span className="log-feature-dot">•</span>
-              <span>Charging</span>
-              <span className="log-feature-dot">•</span>
-              <span>Analytics</span>
+      <div className="login-shell">
+        {/* ===== Left Panel ===== */}
+        <div className="login-left">
+          {/* Floating particles */}
+          <div className="login-particle login-particle-1" />
+          <div className="login-particle login-particle-2" />
+          <div className="login-particle login-particle-3" />
+          <div className="login-particle login-particle-4" />
+
+          <div className="login-left-content">
+            {/* Brand */}
+            <div className="login-brand">
+              <img src="/logo.png" alt="evegah" />
             </div>
-            
-            {/* Animated Scooters Container */}
-            <div className="log-scooter-area">
-              {/* Floating badges */}
-              <div className="log-floating-badge badge-pin" title="Location Tracking">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
+
+            {/* Hero text */}
+            <div className="login-hero-text">
+              <h1 className="login-hero-h1">
+                Powering Smart<br />
+                <span className="green">Electric Mobility</span>
+              </h1>
+              <p className="login-hero-sub">
+                Manage your entire EV fleet from one intelligent platform.
+                Real-time tracking, smart analytics, and seamless operations.
+              </p>
+
+              {/* Feature pills */}
+              <div className="login-features">
+                <span className="login-pill">
+                  <span className="login-pill-dot" />
+                  Fleet Management
+                </span>
+                <span className="login-pill">
+                  <span className="login-pill-dot" />
+                  Smart Rentals
+                </span>
+                <span className="login-pill">
+                  <span className="login-pill-dot" />
+                  Battery Tracking
+                </span>
+                <span className="login-pill">
+                  <span className="login-pill-dot" />
+                  Live Analytics
+                </span>
               </div>
-              
-              <div className="log-floating-badge badge-battery" title="Battery Status: 85%">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <rect x="1" y="6" width="18" height="12" rx="2" />
-                  <line x1="23" y1="11" x2="23" y2="13" />
-                  <line x1="6" y1="12" x2="10" y2="12" />
-                  <line x1="10" y1="12" x2="14" y2="8" />
-                </svg>
-              </div>
-              
-              <div className="log-floating-badge badge-chart" title="Analytics Stats">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-              </div>
-              
-              <div className="log-scooter-container">
-                <div className="log-scooter-item sc-left">
-                  <img src="/scooter_preview.png" className="log-scooter-img" alt="Scooter model left" />
+
+              {/* Stats cards */}
+              <div className="login-stats">
+                <div className="login-stat-card">
+                  <div className="login-stat-icon green">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                    </svg>
+                  </div>
+                  <div className="login-stat-val">2.4K+</div>
+                  <div className="login-stat-label">Active Vehicles</div>
                 </div>
-                <div className="log-scooter-item sc-mid">
-                  <img src="/assets/v1.webp" className="log-scooter-img" alt="Scooter model mid" />
+                <div className="login-stat-card">
+                  <div className="login-stat-icon blue">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </div>
+                  <div className="login-stat-val">18</div>
+                  <div className="login-stat-label">Active Zones</div>
                 </div>
-                <div className="log-scooter-item sc-right">
-                  <img src="/assets/v2.webp" className="log-scooter-img" alt="Scooter model right" />
+                <div className="login-stat-card">
+                  <div className="login-stat-icon purple">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="18" y1="20" x2="18" y2="10" />
+                      <line x1="12" y1="20" x2="12" y2="4" />
+                      <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                  </div>
+                  <div className="login-stat-val">99.8%</div>
+                  <div className="login-stat-label">Uptime</div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="log-bottom-card">
-            <div className="log-shield-ic">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <polyline points="9 11 11 13 15 9" />
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontWeight: '800', color: '#1E293B', fontSize: '12.5px' }}>Secure. Reliable. Sustainable.</div>
-              <div style={{ color: '#64748B', fontSize: '11px', marginTop: '2px', fontWeight: '500' }}>Building the future of electric mobility.</div>
+
+            {/* Trust bar */}
+            <div className="login-trust">
+              <span className="login-trust-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 11 11 13 15 9" />
+                </svg>
+                SSL Encrypted
+              </span>
+              <span className="login-trust-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                SOC 2 Compliant
+              </span>
+              <span className="login-trust-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                99.9% Uptime
+              </span>
             </div>
           </div>
         </div>
-        
-        {/* Right column with Login Container Card */}
-        <div className="log-card-col">
-          <div className="log-card">
-            <div className="log-city-bg" />
-            
-            <div className="log-card-logo-wrap">
-              <img src="/logo.png" alt="e" />
+
+        {/* ===== Right Panel — Login Card ===== */}
+        <div className="login-right">
+          <div className="login-card">
+            <div className="login-card-logo">
+              <img src="/logo.png" alt="evegah" />
             </div>
-            
-            <h2 className="log-card-h2">Welcome back!</h2>
-            <p className="log-card-subtitle">Login to access your evegah dashboard</p>
-            
-            <form onSubmit={handleLoginSubmit} className="log-form">
-              <div className="log-field">
-                <label className="log-lbl">Email address</label>
-                <div className="log-inp-wrap">
-                  <span className="log-inp-ic">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+
+            <h2 className="login-card-h2">Welcome back</h2>
+            <p className="login-card-sub">Sign in to access your evegah dashboard</p>
+
+            <form onSubmit={handleLoginSubmit} className="login-form">
+              {/* Email */}
+              <div className="login-field">
+                <label className="login-label">Email address</label>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                       <polyline points="22,6 12,13 2,6" />
                     </svg>
                   </span>
                   <input 
+                    id="login-email"
                     type="email" 
-                    placeholder="Enter your email" 
-                    className="log-inp" 
+                    placeholder="you@company.com" 
+                    className="login-input" 
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
-              
-              <div className="log-field">
-                <label className="log-lbl">Password</label>
-                <div className="log-inp-wrap">
-                  <span className="log-inp-ic">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+
+              {/* Password */}
+              <div className="login-field">
+                <label className="login-label">Password</label>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                     </svg>
                   </span>
                   <input 
+                    id="login-password"
                     type={showPassword ? "text" : "password"} 
                     placeholder="Enter your password" 
-                    className="log-inp log-inp-pwd" 
+                    className="login-input login-input-pwd" 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                   <button 
                     type="button" 
-                    className="log-eye-btn"
+                    className="login-eye-btn"
                     onClick={() => setShowPassword(!showPassword)}
-                    title="Toggle password view"
+                    title="Toggle password visibility"
                   >
                     {showPassword ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                         <line x1="1" y1="1" x2="23" y2="23" />
                       </svg>
                     ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                         <circle cx="12" cy="12" r="3" />
                       </svg>
@@ -793,50 +974,65 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-              
-              <div className="log-opts-row">
-                <label className="log-cb-label">
-                  <input type="checkbox" className="log-cb" defaultChecked />
-                  <span>Remember me</span>
+
+              {/* Options */}
+              <div className="login-opts">
+                <label className="login-check-label">
+                  <input type="checkbox" className="login-checkbox" defaultChecked />
+                  Remember me
                 </label>
-                <a href="#" className="log-link" onClick={(e) => { e.preventDefault(); alert('Please contact system administrator to reset password.'); }}>
+                <a href="#" className="login-forgot" onClick={(e) => { e.preventDefault(); alert('Please contact system administrator to reset password.'); }}>
                   Forgot password?
                 </a>
               </div>
-              
-              <button type="submit" className="log-submit-btn" disabled={loading}>
-                <span>{loading ? 'Logging in...' : 'Login to Dashboard'}</span>
-                {!loading && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
+
+              {/* Submit */}
+              <button id="login-submit-btn" type="submit" className="login-submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="login-spinner" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign in</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </>
                 )}
               </button>
-              
-              <div className="log-divider">or continue with</div>
-              
+
+              {/* Divider */}
+              <div className="login-divider">or continue with</div>
+
+              {/* Google */}
               <button 
+                id="login-google-btn"
                 type="button" 
-                className="log-google-btn"
+                className="login-google"
                 onClick={() => {
                   localStorage.setItem("evegah_role", "admin");
                   window.dispatchEvent(new Event("evegah_role_changed"));
                   router.push('/');
                 }}
               >
-                {/* Google Multicolor logo */}
-                <svg width="16" height="16" viewBox="0 0 24 24">
+                <svg width="18" height="18" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <span>Sign in with Google</span>
+                Sign in with Google
               </button>
-              
-              <div className="log-footer-text">
-                Don&apos;t have an account? <a href="#" className="log-link" onClick={(e) => { e.preventDefault(); alert('Please contact system administrator to request account creation.'); }}>Contact Admin</a>
+
+              {/* Footer */}
+              <div className="login-footer">
+                Don&apos;t have an account?{' '}
+                <a href="#" onClick={(e) => { e.preventDefault(); alert('Please contact system administrator to request account creation.'); }}>
+                  Contact Admin
+                </a>
               </div>
             </form>
           </div>
