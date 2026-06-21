@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 
 const CSS = `
-.ev-tb{height:68px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;padding:0 22px;gap:12px;position:sticky;top:0;z-index:90;flex-shrink:0}
+.ev-tb{height:68px;background:#fff;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;padding:0 16px;gap:12px;position:sticky;top:0;z-index:90;flex-shrink:0;width:100%;box-sizing:border-box}
 .ev-tb-hamburger{width:34px;height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4.5px;cursor:pointer;flex-shrink:0}
 .ev-tb-hamburger span{display:block;width:18px;height:2px;background:#6B7280;border-radius:2px}
 .ev-tb-user{display:flex;align-items:center;gap:9px}
@@ -108,7 +108,7 @@ export default function TopBar({
   useEffect(() => {
     const getPermissionKeyForPath = (path: string): string => {
       if (path === '/' || path.startsWith('/dashboard')) return 'Dashboard';
-      if (path.startsWith('/new-rider') || path.startsWith('/retain-rider') || path.startsWith('/return-ride') || path.startsWith('/Extend') || path.startsWith('/franchise-users')) {
+      if (path.startsWith('/new-rider') || path.startsWith('/retain-rider') || path.startsWith('/return-ride') || path.startsWith('/extend-ride') || path.startsWith('/franchise-users')) {
         return 'Dashboard';
       }
       if (path.startsWith('/vehicles')) return 'Vehicles';

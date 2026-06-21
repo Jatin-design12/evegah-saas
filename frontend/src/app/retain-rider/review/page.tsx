@@ -13,9 +13,9 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Dancing+Script:wght@700&display=swap');
 
 /* ── shell & layout ── */
-.nr-shell { display: flex; min-height: 100vh; background: #F3F4F9; font-family: Inter, sans-serif; }
-.nr-main  { margin-left: 240px; display: flex; flex-direction: column; min-height: 100vh; width: calc(100% - 240px); }
-.nr-page  { flex: 1; padding: 0 28px 80px; }
+.nr-shell { display: flex; min-height: 100vh; background: #fff; font-family: Inter, sans-serif; }
+.nr-main  { margin-left: 230px; display: flex; flex-direction: column; min-height: 100vh; flex: 1; min-width: 0; background: #fff; }
+.nr-page  { flex: 1; padding: 20px 22px 70px; }
 
 /* ── breadcrumb ── */
 .nr-bc { display: flex; align-items: center; gap: 7px; padding: 14px 0 0; font-size: 12px; color: #9CA3AF; }
@@ -390,9 +390,9 @@ export default function RetainRiderReviewPage() {
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }}/>
       <div className="nr-shell">
-        <Sidebar activePath="/new-rider"/>
+        <Sidebar activePath="/retain-rider"/>
         <div className="nr-main">
-          <TopBar/>
+          <TopBar title="Retain Rider - Review & Confirm" subtitle="Review the rider, rental, and payment details before confirming" />
           <div className="nr-page">
 
             {/* Breadcrumb */}

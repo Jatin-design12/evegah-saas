@@ -6,9 +6,9 @@ import TopBar from '@/components/TopBar';
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-.nr-shell{display:flex;min-height:100vh;background:#F3F4F9;font-family:Inter,sans-serif;}
-.nr-main{margin-left:240px;display:flex;flex-direction:column;min-height:100vh;width:calc(100% - 240px);}
-.nr-page{flex:1;padding:0 28px 80px;}
+.nr-shell{display:flex;min-height:100vh;background:#fff;font-family:Inter,sans-serif;}
+.nr-main{margin-left:230px;display:flex;flex-direction:column;min-height:100vh;flex:1;min-width:0;background:#fff;}
+.nr-page{flex:1;padding:20px 22px 70px;}
 .nr-bc{display:flex;align-items:center;gap:7px;padding:14px 0 0;font-size:12px;color:#9CA3AF;}
 .nr-bc a{color:#9CA3AF;text-decoration:none;} .nr-bc a:hover{color:#4F46E5;} .nr-bc-sep{color:#D1D5DB;} .nr-bc-cur{color:#4F46E5;font-weight:600;}
 .nr-title-row{display:flex;align-items:flex-start;justify-content:space-between;margin:14px 0 20px;gap:16px;}
@@ -118,9 +118,9 @@ export default function RetainRiderDocumentsPage(){
     <>
       <style dangerouslySetInnerHTML={{__html:CSS}}/>
       <div className="nr-shell">
-        <Sidebar activePath="/new-rider"/>
+        <Sidebar activePath="/retain-rider"/>
         <div className="nr-main">
-          <TopBar/>
+          <TopBar title="Retain Rider - Documents" subtitle="Upload or verify rider and vehicle documents" />
           <div className="nr-page">
             <div className="nr-bc">
               <Link href="/">Home</Link><span className="nr-bc-sep">›</span><a href="#">Rides / Rentals</a><span className="nr-bc-sep">›</span><span className="nr-bc-cur">Retain Ride Registration</span>

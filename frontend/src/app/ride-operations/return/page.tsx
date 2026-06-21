@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Sidebar from '@/components/Sidebar';
+import TopBar from '@/components/TopBar';
 
 /* ═══════════════════════════════════════════════════════════════
    RIDE OPERATIONS – RETURN VEHICLE  (Employee Portal)
@@ -10,7 +12,7 @@ import Link from 'next/link';
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-.emp-shell{display:flex;height:100vh;overflow:hidden;background:#F8F9FF;font-family:Inter,sans-serif;}
+.emp-shell{display:flex;height:100vh;overflow:hidden;background:#fff;font-family:Inter,sans-serif;}
 
 /* ── Sidebar ── */
 .emp-sb{width:224px;border-right:1px solid #E5E7EB;display:flex;flex-direction:column;height:100vh;overflow-y:auto;flex-shrink:0;background:#fff;}
@@ -34,7 +36,7 @@ const CSS = `
 .emp-version{font-size:10.5px;color:#9CA3AF;text-align:center;padding-top:10px;}
 
 /* ── Main area ── */
-.emp-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.emp-main{margin-left:230px;flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:#fff;}
 
 /* ── Topbar ── */
 .emp-topbar{display:flex;align-items:center;padding:10px 20px;background:#fff;border-bottom:1px solid #E5E7EB;gap:14px;flex-shrink:0;}
@@ -846,92 +848,16 @@ export default function ReturnVehiclePage() {
     </div>
   );
 
-  /* ─── Sidebar nav items ─── */
-  const navItems = [
-    {section:'DASHBOARD',items:[{icon:<IGrid/>,label:'Dashboard',path:'/dashboard'}]},
-    {section:'RIDE OPERATIONS',items:[
-      {icon:<ICar/>,    label:'Ride Operations',     path:'/ride-operations/return', active:true},
-      {icon:<IRefresh/>,label:'Battery Swap',         path:'/battery-swap'},
-      {icon:<IID/>,     label:'My Requests',          path:'/my-requests'},
-    ]},
-    {section:'MANAGE',items:[
-      {icon:<IUser/>,   label:'Riders',               path:'/riders'},
-      {icon:<ICar/>,    label:'Vehicles & Batteries',  path:'/vehicles'},
-      {icon:<ICal/>,    label:'Bookings',              path:'/bookings'},
-    ]},
-    {section:'OTHER',items:[
-      {icon:<IGrid/>,   label:'Reports',              path:'/reports'},
-      {icon:<IHelp/>,   label:'Knowledge Base',       path:'/knowledge'},
-      {icon:<IMsg/>,    label:'Support',              path:'/support'},
-    ]},
-  ];
-
   /* ─── Render ─── */
   return (
     <>
       <style dangerouslySetInnerHTML={{__html:CSS}}/>
       <div className="emp-shell">
-
-        {/* ── Sidebar ── */}
-        <div className="emp-sb">
-          <div className="emp-sb-logo">
-            <div className="emp-logo-ic">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            </div>
-            <span className="emp-logo-text"><span>E</span>vegah</span>
-          </div>
-
-          {navItems.map(sec=>(
-            <div key={sec.section} className="emp-sb-section">
-              <span className="emp-sb-sec-lbl">{sec.section}</span>
-              {sec.items.map(item=>(
-                <div key={item.label} className={`emp-sb-item ${(item as {active?:boolean}).active?'active':''}`}>
-                  {item.icon} {item.label}
-                </div>
-              ))}
-            </div>
-          ))}
-
-          <div className="emp-sb-footer">
-            <div className="emp-need-help">
-              <div className="emp-need-help-ic"><IHelp/></div>
-              <div className="emp-need-help-title">Need Help?</div>
-              <div className="emp-need-help-sub">Contact support team</div>
-              <a className="emp-raise-ticket" href="#">Raise a Ticket <IArr/></a>
-            </div>
-            <div className="emp-version">© 2024 Evegah&nbsp;&nbsp;v2.5.0</div>
-          </div>
-        </div>
+        <Sidebar activePath="/return-ride" />
 
         {/* ── Main ── */}
         <div className="emp-main">
-          {/* Topbar */}
-          <div className="emp-topbar">
-            <div className="emp-ham"><IHam/></div>
-            <div className="emp-page-info">
-              <div className="emp-page-title">Ride Operations</div>
-              <div className="emp-page-sub">Manage return, extend and exchange requests</div>
-            </div>
-            <div className="emp-search-bar">
-              <ISearch/>
-              <input className="emp-search-inp" placeholder="Search by rider, mobile, booking ID or vehicle..."/>
-              <span style={{fontSize:11,color:'#9CA3AF',background:'#F3F4F6',borderRadius:4,padding:'2px 5px',whiteSpace:'nowrap'}}>⌘ K</span>
-            </div>
-            <div className="emp-topbar-right">
-              <div className="emp-notif-btn">
-                <IBell/>
-                <div className="emp-notif-badge">1</div>
-              </div>
-              <div className="emp-user-chip">
-                <div className="emp-user-av">PS</div>
-                <div>
-                  <div className="emp-user-name">Priya Sharma</div>
-                  <div className="emp-user-role">Employee</div>
-                </div>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-              </div>
-            </div>
-          </div>
+          <TopBar title="Return Ride" subtitle="Complete the ride and initiate return" showHand={false} />
 
           {/* Tabs */}
           <div className="emp-tabs">

@@ -84,7 +84,7 @@ const COMMON_CSS = `
 /* ── Employee Dashboard CSS & Components ── */
 const EMPLOYEE_CSS = `
 .ev-shell{display:flex;min-height:100vh}
-.ev-main{margin-left:230px;display:flex;flex-direction:column;min-height:100vh;width:calc(100% - 230px);background:#fff}
+.ev-main{margin-left:230px;display:flex;flex-direction:column;min-height:100vh;flex:1;min-width:0;background:#fff}
 .ev-body{padding:20px 22px 70px;flex:1;display:flex;flex-direction:column;gap:20px}
 .ev-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .ev-sc{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:15px 16px 13px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
